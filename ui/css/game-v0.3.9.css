@@ -1,0 +1,57 @@
+:root {
+	--main-bg-color: rgba(238,238,238,1.0);
+	--opaque-white: rgba(255,255,255,1.0);
+	--opaque-black: rgba(0,0,0,1.0);
+	--translucent-black: rgba(0,0,0,.5);
+	--one-em: 1em;
+	--obstacle-width: 1.1em;
+	--obstacle-height: 1.1em;
+	--game-board-border: 1em;
+}
+
+html, body {
+	height: 100%;
+	width: 100%;
+}
+
+#container {
+	border:0;
+	margin:0;
+	height:100%;
+	width:100%;
+	padding:0;
+	background-color: var(--main-bg-color);
+	box-shadow:none;
+	box-sizing:border-box;
+	border: var(--game-board-border) solid var(--opaque-white);
+}
+
+#game-board {
+	width: auto;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+	overflow: hidden;
+}
+#game-piece {
+	height: calc(.7 * var(--one-em));
+	width: calc(.7 * var(--one-em));
+	border: .2em solid var(--translucent-black);
+	border-radius: .5em;
+	position: relative;
+	display:inline-block;
+	margin: auto;
+}
+.obstacle {
+	width: calc(var(--obstacle-width) * 10);
+	height: var(--obstacle-height);
+	vertical-align:top;
+	border: none;
+	margin: 0;
+	padding: 0;
+	left: calc(100% - var(--game-board-border) - calc(var(--obstacle-width) * 10) - 1px);
+	top: calc(var(--obstacle-width) * 2);
+	background-color: var(--opaque-black);
+	display:inline-block;
+	position:absolute;
+}
