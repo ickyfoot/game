@@ -4,7 +4,7 @@
 	<?php
 		$gameRoot = __DIR__;
 		$root = realpath(__DIR__. '/..');
-		include('includes/game-assets.php');
+		include('includes/game-css-assets.php');
 	?>
 	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">     

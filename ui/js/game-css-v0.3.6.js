@@ -1,4 +1,4 @@
-console.log('test');
+console.log('toast');
 game = {
 	controls: {
 		arrowKeys: ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'],

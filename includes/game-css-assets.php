@@ -5,7 +5,7 @@
 	$gameCssPath = '/ui/css/';
 	$gameCssWebPath = '/game/ui/css/';
 	$mainStyleFilename = 'style.css';
-	$gameStyleFilename = 'game-v0.3.9.css';
+	$gameStyleFilename = 'game-css-v0.3.9.css';
 	$mainStyleFilePath = $root.$mainCssPath.$mainStyleFilename;
 	$gameStyleFilePath = $gameRoot.$gameCssPath.$gameStyleFilename;
 	$mainStyleHash = (file_exists($mainStyleFilePath)) ? '?'.md5(filemtime($mainStyleFilePath)) : NULL;
@@ -19,7 +19,7 @@
 	$gameJsPath = '/ui/js/';
 	$gameJsWebPath = '/game/ui/js/';
 	$mainJsFilename = 'init-v0.4.js';
-	$gameJsFilename = 'game-v0.3.6.js';
+	$gameJsFilename = 'game-css-v0.3.6.js';
 	$mainJSFilePath = $root.$mainJsPath.$mainJsFilename;
 	$gameJSFilePath = $gameRoot.$gameJsPath.$gameJsFilename;
 	echo $gameJsFilePath.$gameJsFileName;
