@@ -219,8 +219,10 @@ game = {
 	run: function() {
 		return setInterval(function() {
 			if (game.status == 'playing') {
-				// clear board
+				// clear board to prepare for next animation state
 				game.board.context.clearRect(0,0,game.board.dimensions.width,game.board.dimensions.height);
+				
+				// detect player control
 				game.board.player.control();
 			}
 		}, 1);
