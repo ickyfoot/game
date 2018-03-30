@@ -49,32 +49,41 @@ game = {
 		},
 		player: {
 			control: function() {
+				// determine if player piece movement or resizing should be modulated
+				var xModulate = (!!game.controls.pressedKeys['x'] || !!game.controls.pressedKeys['X']);
+				var yModulate = (!!game.controls.pressedKeys['c'] || !!game.controls.pressedKeys['C']);
+				var zModulate = (!!game.controls.pressedKeys['z'] || !!game.controls.pressedKeys['Z'] || !!game.controls.pressedKeys['Shift']);
+				
+				// set movement and resizing amount
+				var xDelta = (!!xModulate) ? 0.25 : 1;
+				var yDelta = (!!yModulate) ? 0.25 : 1;				
+				var radiusDelta = (!!zModulate) ? 0.25 : 1;
+				
+				// resize player piece
 				if (!!game.controls.pressedKeys['Control'] &&
 						(!!game.controls.pressedKeys['ArrowLeft'] || !!game.controls.pressedKeys['ArrowRight']
 						|| !!game.controls.pressedKeys['ArrowUp'] || !!game.controls.pressedKeys['ArrowDown'])) {
+					// reset player piece size
 					game.board.player.dim.radius = game.board.player.dim.originalDim.radius;
-				} 
-				if (!!game.controls.pressedKeys['ArrowLeft'] && !!game.controls.pressedKeys['ArrowRight']) {
-					game.board.player.dim.radius++;
-				} else if (!!game.controls.pressedKeys['ArrowUp'] && !!game.controls.pressedKeys['ArrowDown']) {
-					if (game.board.player.dim.radius > 0) game.board.player.dim.radius--;
 				} else {
-					if (!!game.controls.pressedKeys['ArrowUp']) {
-						game.board.player.dim.y--;
+					// resize player piece
+					if (!!game.controls.pressedKeys['ArrowLeft'] && !!game.controls.pressedKeys['ArrowRight']) {
+						game.board.player.dim.radius += radiusDelta;
 					}
 					
-					if (!!game.controls.pressedKeys['ArrowRight']) {
-						game.board.player.dim.x++;
-					}
-					
-					if (!!game.controls.pressedKeys['ArrowDown']) {
-						game.board.player.dim.y++;
-					}
-					
-					if (!!game.controls.pressedKeys['ArrowLeft']) {
-						game.board.player.dim.x--;
+					if (!!game.controls.pressedKeys['ArrowUp'] && !!game.controls.pressedKeys['ArrowDown']
+							&& game.board.player.dim.radius > 0) {
+						game.board.player.dim.radius = (game.board.player.dim.radius - radiusDelta <= 0) 
+							? 0
+							: game.board.player.dim.radius - radiusDelta;
 					}
 				}
+				
+				// move player piece
+				if (!!game.controls.pressedKeys['ArrowUp']) game.board.player.dim.y -= yDelta;					
+				if (!!game.controls.pressedKeys['ArrowRight']) game.board.player.dim.x += xDelta;					
+				if (!!game.controls.pressedKeys['ArrowDown']) game.board.player.dim.y += yDelta;					
+				if (!!game.controls.pressedKeys['ArrowLeft']) game.board.player.dim.x -= xDelta;
 				
 				// redraw player
 				game.board.player.draw(game.board.context, game.board.player.dim);
