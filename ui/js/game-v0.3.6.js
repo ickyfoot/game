@@ -1,11 +1,7 @@
-console.log('test');
 game = {
-	controls: {
-		arrowKeys: ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'],
-		keywords: ['start'],
-		pressedKeys: {}
-	},
 	board: {
+		canvas: null,
+		context: null,
 		dimensions: {
 			height: null,
 			piece: null,
@@ -30,7 +26,7 @@ game = {
 					if (!!game.interactions.detect.collision(game.board.player, game.board.obstacles[i])) {
 						game.board.player.piece.css('border-color','red');
 						game.status = 'collision';
-					} else if (game.board.obstacles[i].position.left <= game.board.edge.left) game.status = 'collision';
+					} else if (game.board.obstacles[i].position.left <= game.board.dimensions.position.left) game.status = 'collision';
 				}					
 				if (game.status === 'collision') clearInterval(game.controls.moveBoardLeft);
 			}, 5)
@@ -52,58 +48,78 @@ game = {
 			width: null
 		},
 		player: {
-			height: null,
-			piece: null,
-			position: {
-				top: null,
-				right: null,
-				bottom: null,
-				left: null,
-				x: null,
-				y: null
+			control: function() {
+				if (!!game.controls.pressedKeys['Control'] &&
+						(!!game.controls.pressedKeys['ArrowLeft'] || !!game.controls.pressedKeys['ArrowRight']
+						|| !!game.controls.pressedKeys['ArrowUp'] || !!game.controls.pressedKeys['ArrowDown'])) {
+					game.board.player.dim.radius = game.board.player.dim.originalDim.radius;
+				} 
+				if (!!game.controls.pressedKeys['ArrowLeft'] && !!game.controls.pressedKeys['ArrowRight']) {
+					game.board.player.dim.radius++;
+				} else if (!!game.controls.pressedKeys['ArrowUp'] && !!game.controls.pressedKeys['ArrowDown']) {
+					if (game.board.player.dim.radius > 0) game.board.player.dim.radius--;
+				} else {
+					if (!!game.controls.pressedKeys['ArrowUp']) {
+						game.board.player.dim.y--;
+					}
+					
+					if (!!game.controls.pressedKeys['ArrowRight']) {
+						game.board.player.dim.x++;
+					}
+					
+					if (!!game.controls.pressedKeys['ArrowDown']) {
+						game.board.player.dim.y++;
+					}
+					
+					if (!!game.controls.pressedKeys['ArrowLeft']) {
+						game.board.player.dim.x--;
+					}
+				}
+				
+				// redraw player
+				game.board.player.draw(game.board.context, game.board.player.dim);
 			},
-			xFromCenter: null,
-			yFromCenter: null,
-			width: null
-		},
-		edge: {
-			top: null,
-			left: null
+			dim: {
+				'radius':0,
+				'originalDim': {
+					'radius': 0,
+					'x':0,
+					'y':0
+				},
+				'x':0,
+				'y':0
+			},
+			draw: function(ctx, dim) {
+				ctx.beginPath();
+				ctx.arc(dim.x, dim.y, dim.radius, 0, 2*Math.PI);
+				ctx.closePath();
+				ctx.stroke();
+			}
 		}
 	},
+	controls: {
+		arrowKeys: ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'],
+		keywords: ['start'],
+		pressedKeys: {}
+	},
 	init: function() {
-		$('#game-board').html(
-				'<div id="game-piece"></div>'
-			+	'<div class="obstacle"></div>'
-		);
-		
-		// set board dimensions
-		game.board.edge.left = parseInt($('#game-board').position().left);
-		game.board.edge.top = parseInt($('#game-board').position().top);
-		game.board.edge.right = game.board.edge.left + parseInt($('#game-board').width());
-		game.board.edge.bottom = game.board.edge.top + parseInt($('#game-board').height());
-		
-		// set up board
+		// get board dimensions
 		var gameBoard = $.extend(true, {}, game.board.dimensions);
 		game.board.dimensions = game.values.setObjectDimensions(gameBoard, $('#game-board'));
 		
-		// set up player
-		var player = $.extend(true, {}, game.board.player);
-		game.board.player = game.values.setObjectDimensions(player, $('#game-piece'));
-		
-		// center player
-		game.board.player.piece.css('left', (game.board.dimensions.position.x - game.board.player.xFromCenter) + 'px');
-		game.board.player.piece.css('top', (game.board.dimensions.position.y - game.board.player.yFromCenter) + 'px');
-		
-		// update player params
-		game.board.player = game.values.setObjectDimensions(game.board.player, $('#game-piece'));
-		
-		// set up obstacles
-		var obstacles = $('.obstacle');		
-		for (var i = 0; i < obstacles.length; i++) {
-			var obstacle = $.extend(true, {}, game.board.obstacle);
-			game.board.obstacles.push(game.values.setObjectDimensions(obstacle, $(obstacles[i])));
+		game.board.player.dim = {
+			'radius': 5,
+			'originalDim': {
+				'radius': 5,
+				'x':(game.board.dimensions.width/2),
+				'y':(game.board.dimensions.height/2)
+			},
+			'x':(game.board.dimensions.width/2),
+			'y':(game.board.dimensions.height/2)
 		}
+		
+		// draw player
+		game.board.player.draw(game.board.context, game.board.player.dim);
 		
 		game.start();
 	},
@@ -194,39 +210,15 @@ game = {
 	run: function() {
 		return setInterval(function() {
 			if (game.status == 'playing') {
-				var newLeft = 0;
-				var newTop = 0;
-				var currentTop = parseInt(game.board.player.position.top);
-				var pieceWidth = parseInt(game.board.player.piece.height());				
-				var pieceHeight = parseInt(game.board.player.piece.height());
-				var currentLeft = parseInt(game.board.player.position.left);
-				
-				if (!!game.controls.pressedKeys['ArrowUp']) {
-					if (game.board.player.position.top > parseInt(game.board.edge.top)) newTop = currentTop - 1;
-				}
-				
-				if (!!game.controls.pressedKeys['ArrowRight']) {
-					if (game.board.player.position.right < parseInt(game.board.edge.right)) newLeft = currentLeft + 1;
-				}
-				
-				if (!!game.controls.pressedKeys['ArrowDown']) {
-					if (game.board.player.position.bottom < parseInt(game.board.edge.bottom)) newTop = currentTop + 1;
-				}
-				
-				if (!!game.controls.pressedKeys['ArrowLeft']) {
-					if (game.board.player.position.left > parseInt(game.board.edge.left)) newLeft = currentLeft - 1;
-				}
-				
-				if (newLeft > 0) game.board.player.piece.css('left', (newLeft - game.board.edge.left) + 'px');
-				if (newTop > 0) game.board.player.piece.css('top', (newTop - game.board.edge.top) + 'px');
-				
-				game.board.player = game.values.setObjectDimensions(game.board.player, $('#game-piece'));
+				// clear board
+				game.board.context.clearRect(0,0,game.board.dimensions.width,game.board.dimensions.height);
+				game.board.player.control();
 			}
 		}, 1);
 	},
 	start: function() {
 		game.status = 'playing';
-		game.controls.moveBoardLeft = game.board.moveLeft();
+		//game.controls.moveBoardLeft = game.board.moveLeft();
 		game.run();
 	},
 	status: 'pending',
@@ -237,6 +229,10 @@ game = {
 };
 
 $(document).on('ready',function() {
+	game.board.canvas = document.getElementById('game-board');
+	game.board.context = game.board.canvas.getContext('2d');
+	$(game.board.canvas).attr('width', $('#container').width());
+	$(game.board.canvas).attr('height', $('#container').height());
 	ickyfoot.setUpKeyDetection(function(key,type) {
 		game.controls.pressedKeys[key] = (type == 'keydown' || type == 'keypress');
 		

@@ -19,7 +19,7 @@
 <body>
 	<header></header>
 	<div id="container">
-		<div id="game-board"></div>
+		<canvas id="game-board"></canvas>
 	</div> <?php // END #content-container ?>
 	<footer></footer>
 </body>
