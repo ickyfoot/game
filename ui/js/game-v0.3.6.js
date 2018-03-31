@@ -1,4 +1,16 @@
 game = {
+	animation: {
+		fps: 60,
+		fpsAsMilliseconds: null,
+		frameCount: null,
+		frameLength: null,
+		lastFrame: null,
+		main: null,
+		nextFrame: null,
+		// how many loops to perform per millisecond in each frame
+		// the higher the number, the faster the player moves
+		playerLoopsPerFrameMillisecond: 1
+	},
 	board: {
 		canvas: null,
 		context: null,
@@ -16,20 +28,6 @@ game = {
 			xFromCenter: null,
 			yFromCenter: null,
 			width: null
-		},
-		moveLeft: function() {
-			return setInterval(function() {
-				for (var i = 0; i < game.board.obstacles.length; i++) {
-					game.board.obstacles[i].piece.css('left', game.board.obstacles[i].position.left-- + 'px');
-					game.board.obstacles[i].position.right = game.board.obstacles[i].position.left + game.board.obstacles[i].width;
-					
-					if (!!game.interactions.detect.collision(game.board.player, game.board.obstacles[i])) {
-						game.board.player.piece.css('border-color','red');
-						game.status = 'collision';
-					} else if (game.board.obstacles[i].position.left <= game.board.dimensions.position.left) game.status = 'collision';
-				}					
-				if (game.status === 'collision') clearInterval(game.controls.moveBoardLeft);
-			}, 5)
 		},
 		obstacles: [],
 		obstacle: {
@@ -184,6 +182,41 @@ game = {
 			}
 		}
 	},
+	mode: false,
+	// main loop
+	run: function(tFrame) {
+		// see here for consistent frame rate logic:
+		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
+		game.animation.main = window.requestAnimationFrame(game.run);
+		if (game.status == 'playing' && game.animation.lastFrame !== null) {
+			game.animation.frameLength = performance.now() - game.animation.lastFrame;
+			
+			// redraw every other millisecond available to each frame
+			for (var i = 0; i < (game.animation.fpsAsMilliseconds * game.animation.playerLoopsPerFrameMillisecond); i++) {
+				if (game.animation.frameLength > game.animation.fpsAsMilliseconds) {
+					// clear board to prepare for next animation state
+					game.board.context.clearRect(0,0,game.board.dimensions.width,game.board.dimensions.height);
+					
+					// detect player control
+					game.board.player.control();
+					
+					// set new lastFrame time
+					game.animation.lastFrame = performance.now();
+				}
+			}
+		}
+	},
+	start: function() {
+		game.animation.fpsAsMilliseconds = 1000/game.animation.fps;
+		game.animation.lastFrame = performance.now();
+		game.status = 'playing';
+		game.run();
+	},
+	status: 'pending',
+	stop: function(status) {
+		game.status = status;
+		window.cancelAnimationFrame(game.animation.main);
+	},
 	values: {
 		keywords: ['start'],
 		setObjectDimensions: function(obj, piece) {
@@ -214,28 +247,6 @@ game = {
 			obj.position.y = obj.position.top + obj.yFromCenter;
 			return obj;
 		}
-	},
-	mode: false,
-	run: function() {
-		return setInterval(function() {
-			if (game.status == 'playing') {
-				// clear board to prepare for next animation state
-				game.board.context.clearRect(0,0,game.board.dimensions.width,game.board.dimensions.height);
-				
-				// detect player control
-				game.board.player.control();
-			}
-		}, 1);
-	},
-	start: function() {
-		game.status = 'playing';
-		//game.controls.moveBoardLeft = game.board.moveLeft();
-		game.run();
-	},
-	status: 'pending',
-	stop: function(status) {
-		game.status = status;
-		clearInterval(game.controls.moveBoardLeft);
 	}
 };
 
