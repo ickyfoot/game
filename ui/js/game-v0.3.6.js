@@ -47,15 +47,15 @@ game = {
 		},
 		player: {
 			control: function() {
-				// determine if player piece movement or resizing should be modulated
-				var xModulate = (!!game.controls.pressedKeys['x'] || !!game.controls.pressedKeys['X']);
-				var yModulate = (!!game.controls.pressedKeys['c'] || !!game.controls.pressedKeys['C']);
-				var zModulate = (!!game.controls.pressedKeys['z'] || !!game.controls.pressedKeys['Z'] || !!game.controls.pressedKeys['Shift']);
+				// determine if player piece movement or resizing should be throttled
+				var xThrottle = (!!game.controls.pressedKeys['x'] || !!game.controls.pressedKeys['X']);
+				var yThrottle = (!!game.controls.pressedKeys['c'] || !!game.controls.pressedKeys['C']);
+				var zThrottle = (!!game.controls.pressedKeys['z'] || !!game.controls.pressedKeys['Z'] || !!game.controls.pressedKeys['Shift']);
 				
 				// set movement and resizing amount
-				var xDelta = (!!xModulate) ? 0.25 : 1;
-				var yDelta = (!!yModulate) ? 0.25 : 1;				
-				var radiusDelta = (!!zModulate) ? 0.25 : 1;
+				var xDelta = (!!xThrottle) ? 0.25 : 1;
+				var yDelta = (!!yThrottle) ? 0.25 : 1;				
+				var radiusDelta = (!!zThrottle) ? 0.25 : 1;
 				
 				// resize player piece
 				if (!!game.controls.pressedKeys['Control'] &&
@@ -107,7 +107,8 @@ game = {
 	controls: {
 		arrowKeys: ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'],
 		keywords: ['start'],
-		pressedKeys: {}
+		pressedKeys: {},
+		worker: new Worker('/game/ui/js/game-worker.js')
 	},
 	init: function() {
 		// get board dimensions
@@ -127,6 +128,11 @@ game = {
 		
 		// draw player
 		game.board.player.draw(game.board.context, game.board.player.dim);
+		
+		game.controls.worker.onmessage = function(e) {
+			//console.log('main received message:');
+			//console.log(e);
+		};
 		
 		game.start();
 	},
@@ -191,18 +197,16 @@ game = {
 		if (game.status == 'playing' && game.animation.lastFrame !== null) {
 			game.animation.frameLength = performance.now() - game.animation.lastFrame;
 			
-			// redraw every other millisecond available to each frame
-			for (var i = 0; i < (game.animation.fpsAsMilliseconds * game.animation.playerLoopsPerFrameMillisecond); i++) {
-				if (game.animation.frameLength > game.animation.fpsAsMilliseconds) {
-					// clear board to prepare for next animation state
-					game.board.context.clearRect(0,0,game.board.dimensions.width,game.board.dimensions.height);
-					
-					// detect player control
-					game.board.player.control();
-					
-					// set new lastFrame time
-					game.animation.lastFrame = performance.now();
-				}
+			if (game.animation.frameLength > game.animation.fpsAsMilliseconds) {
+				game.controls.worker.postMessage(game.animation.frameLength);
+				// clear board to prepare for next animation state
+				game.board.context.clearRect(0,0,game.board.dimensions.width,game.board.dimensions.height);
+				
+				// detect player control
+				game.board.player.control();
+				
+				// set new lastFrame time
+				game.animation.lastFrame = performance.now() - (game.animation.frameLength % game.animation.fpsAsMilliseconds);
 			}
 		}
 	},
