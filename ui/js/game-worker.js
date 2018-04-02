@@ -1,44 +1,27 @@
-onmessage = function(e) {
-	var appData, action, metaData, utils;
-	metaData = e.data;
-	appData = metaData.appData;
-	action = metaData.action;
-	utils = (typeof arguments[1] !== 'undefined') ? arguments[1] : null;
-	switch (action) {
-		case 'control player':
-			var lastFrame, frameLength, dim;
-			frameLength = appData.now - appData.lastFrame;
-			if (frameLength > appData.fpsAsMilliseconds) {
-				// set new lastFrame time
-				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
-				dim = game.player.updatePosition(appData);
-				postMessage({
-					'action': 'control player',
-					'appData': {
-						'lastFrame': lastFrame,
-						'radius': dim.radius,
-						'x': dim.x,
-						'y': dim.y
-					}
-				});
-			}
-		break;
-	}
-}
-
 var game = {
 	player: {
+		detectCollision: function(item1, item2) {
+			// need to account for (obstacle edge % piece edge)			
+			return 	(	
+						(item1.y - item1.radius) <= item2.position.top
+						|| (item1.x + item1.radius) >= item2.position.right
+						|| (item1.y + item1.radius) >= item2.position.bottom
+						|| (item1.x - item1.radius) <= item2.position.left
+					);
+		},
 		updatePosition: function(data) {
-			var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta, radius, x, y;
+			var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta, radius, x, y, fullSpeed, throttledSpeed;
 			// determine if player piece movement or resizing should be throttled
+			fullSpeed = 5;
+			throttledSpeed = 2;
 			xThrottle = (!!data.controls.pressedKeys['x'] || !!data.controls.pressedKeys['X']);
 			yThrottle = (!!data.controls.pressedKeys['c'] || !!data.controls.pressedKeys['C']);
 			zThrottle = (!!data.controls.pressedKeys['z'] || !!data.controls.pressedKeys['Z'] || !!data.controls.pressedKeys['Shift']);
 			
 			// set movement and resizing amount
-			xDelta = (!!xThrottle) ? 0.25 : 1;
-			yDelta = (!!yThrottle) ? 0.25 : 1;				
-			radiusDelta = (!!zThrottle) ? 0.25 : 1;
+			xDelta = (!!xThrottle) ? throttledSpeed : fullSpeed;
+			yDelta = (!!yThrottle) ? throttledSpeed : fullSpeed;				
+			radiusDelta = (!!zThrottle) ? throttledSpeed : fullSpeed;
 			
 			radius = data.player.dim.radius;
 			x = data.player.dim.x;
@@ -76,5 +59,34 @@ var game = {
 				'y': y
 			};
 		}
+	}
+}
+
+onmessage = function(e) {			
+	var appData, action, metaData, utils;
+	metaData = e.data;
+	appData = metaData.appData;
+	action = metaData.action;
+	switch (action) {
+		case 'control player':
+			var lastFrame, frameLength, dim;
+			frameLength = appData.now - appData.lastFrame;
+			if (frameLength > appData.fpsAsMilliseconds) {
+				// set new lastFrame time
+				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
+				if (!game.player.detectCollision(appData.player.dim, appData.board)) {
+					dim = game.player.updatePosition(appData);
+					postMessage({
+						'action': 'control player',
+						'appData': {
+							'lastFrame': lastFrame,
+							'radius': dim.radius,
+							'x': dim.x,
+							'y': dim.y
+						}
+					});
+				}
+			}
+		break;
 	}
 }

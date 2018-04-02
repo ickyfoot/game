@@ -73,8 +73,8 @@ var game = {
 	},
 	init: function() {
 		// get board dimensions
-		var gameBoard = $.extend(true, {}, game.board.dimensions);
-		game.board.dimensions = game.values.setObjectDimensions(gameBoard, $('#game-board'));
+		game.board.dimensions = $.extend(true, {}, game.board.dimensions);
+		game.values.setObjectDimensions(game.board.dimensions, $('#game-board'));
 		
 		game.board.player.dim = {
 			'radius': 5,
@@ -145,58 +145,9 @@ var game = {
 	inputs: {
 		word: ''
 	},
-	interactions: {
-		detect: {
-			collision: function(item1, item2) {
-				//	(
-				//		VERTICAL OVERLAP
-				//		(
-				//			(
-				/***************item1 top is between item2 top and bottom */
-				// 				item1 top is <= item2 top && item1 top is >= item2 bottom
-				// 			)
-				
-				// 			OR
-				
-				//			(
-				/***************item1 bottom is between item2 top and bottom */
-				// 				item1 bottom is <= item2 top && item1 bottom is >= item2 bottom
-				// 			)
-				//		)
-				
-				//		AND
-				//		HORIZONTAL OVERLAP
-				
-				//		(
-				//			(
-				/***************item1 right is between item2 right and left */
-				// 				item1 right is >= item2 left && item1 right is <= item2 right
-				// 			)
-				
-				// 			OR
-				
-				//			(
-				/***************item1 left is between item2 right and left */
-				// 				item1 left is >= item2 left && item1 left is <= item2 right
-				// 			)
-				//		)
-				//	)
-				var checkVertical = function(side) {
-					return (side >= item2.position.top && side <= item2.position.bottom);
-				}
-				var checkHorizontal = function(side) {
-					return (side >= item2.position.left && side <= item2.position.right);
-				}
-				
-				return 	((!!checkVertical(item1.position.top) || !!checkVertical(item1.position.bottom))) 
-							&& 
-						((!!checkHorizontal(item1.position.left) || !!checkHorizontal(item1.position.right)));
-			}
-		}
-	},
 	mode: false,
 	// main loop
-	run: function(tFrame) {
+	run: function() {
 		// see here for consistent frame rate logic:
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
 		game.animation.main = window.requestAnimationFrame(game.run);
@@ -210,6 +161,9 @@ var game = {
 					'lastFrame': game.animation.lastFrame,
 					'fpsAsMilliseconds': game.animation.fpsAsMilliseconds,
 					'player': game.board.player,
+					'board': {
+						'position': game.board.dimensions.position
+					},
 					'controls': game.controls
 				}
 			});
@@ -254,7 +208,6 @@ var game = {
 			obj.yFromCenter = (obj.totalHeight/2);
 			obj.position.x = obj.position.left + obj.xFromCenter;
 			obj.position.y = obj.position.top + obj.yFromCenter;
-			return obj;
 		}
 	},
 	worker: new Worker('/game/ui/js/game-worker.js?'+performance.now())
