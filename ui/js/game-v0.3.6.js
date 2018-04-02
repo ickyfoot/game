@@ -162,7 +162,8 @@ var game = {
 					'fpsAsMilliseconds': game.animation.fpsAsMilliseconds,
 					'player': game.board.player,
 					'board': {
-						'position': game.board.dimensions.position
+						'width': game.board.dimensions.width,
+						'height': game.board.dimensions.height
 					},
 					'controls': game.controls
 				}

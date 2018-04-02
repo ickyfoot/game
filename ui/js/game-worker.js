@@ -1,13 +1,22 @@
 var game = {
 	player: {
 		detectCollision: function(item1, item2) {
-			// need to account for (obstacle edge % piece edge)			
-			return 	(	
-						(item1.y - item1.radius) <= item2.position.top
-						|| (item1.x + item1.radius) >= item2.position.right
-						|| (item1.y + item1.radius) >= item2.position.bottom
-						|| (item1.x - item1.radius) <= item2.position.left
-					);
+			//////////////////////////////////////////////////////
+			// need to account for stroke width of player piece //
+			//////////////////////////////////////////////////////
+			var item1Top = item1.y - item1.radius;
+			var item1Right = item1.x + item1.radius;
+			var item1Bottom = item1.y + item1.radius;
+			var item1Left = item1.x - item1.radius;
+			
+			var collision = (	
+					item1Top <= 0
+				|| 	item1Right >= item2.width
+				|| 	item1Bottom >= item2.height
+				|| 	item1Left <= 0
+			);
+			
+			return collision;
 		},
 		updatePosition: function(data) {
 			var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta, radius, x, y, fullSpeed, throttledSpeed;
