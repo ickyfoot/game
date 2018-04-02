@@ -5,12 +5,12 @@ var game = {
 			'x': null,
 			'y': null
 		},
-		detectCollision: function(item1, item2) {			
+		detectCollision: function(player, item2) {			
 			var collision = (	
-					item1.y < 0
-				|| 	item1.x >= item2.width
-				|| 	item1.y > item2.height
-				|| 	item1.x <= 0
+					player.y < 0
+				|| 	player.x >= item2.width
+				|| 	player.y > item2.height
+				|| 	player.x <= 0
 			);
 			
 			return collision;
