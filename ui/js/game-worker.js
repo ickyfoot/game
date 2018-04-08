@@ -46,21 +46,19 @@ var game = {
 				// resize player piece
 				if (!!data.controls.pressedKeys['ArrowLeft'] && !!data.controls.pressedKeys['ArrowRight']) {
 					tempDim.radius = data.player.radius + radiusDelta;
-				}
-				
-				if (!!data.controls.pressedKeys['ArrowUp'] && !!data.controls.pressedKeys['ArrowDown']
+				} else if (!!data.controls.pressedKeys['ArrowUp'] && !!data.controls.pressedKeys['ArrowDown']
 						&& data.player.radius > 0) {
 					tempDim.radius = (data.player.radius - radiusDelta <= 0) 
 						? 0
 						: data.player.radius - radiusDelta;
+				} else {
+					// move player piece
+					if (!!data.controls.pressedKeys['ArrowUp']) tempDim.y = data.player.y - yDelta;					
+					if (!!data.controls.pressedKeys['ArrowRight']) tempDim.x = data.player.x + xDelta;					
+					if (!!data.controls.pressedKeys['ArrowDown']) tempDim.y = data.player.y + yDelta;					
+					if (!!data.controls.pressedKeys['ArrowLeft']) tempDim.x = data.player.x - xDelta;
 				}
 			}
-			
-			// move player piece
-			if (!!data.controls.pressedKeys['ArrowUp']) tempDim.y = data.player.y - yDelta;					
-			if (!!data.controls.pressedKeys['ArrowRight']) tempDim.x = data.player.x + xDelta;					
-			if (!!data.controls.pressedKeys['ArrowDown']) tempDim.y = data.player.y + yDelta;					
-			if (!!data.controls.pressedKeys['ArrowLeft']) tempDim.x = data.player.x - xDelta;
 			
 			finalPosition = (!game.player.detectCollision(tempDim, data.board))
 				? tempDim

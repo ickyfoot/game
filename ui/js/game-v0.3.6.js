@@ -48,45 +48,6 @@ function Controls() {
 	this.pressedKeys = {};
 }
 
-function Obstacle(x, y, w, h) {
-	this.dim = {
-		x: x,
-		y: y,
-		w: w,
-		h: h,
-		right: x + w,
-		bottom: y + h
-	};
-	this.drawType = 'path';
-	this.update = (x, y, w, h) => {
-		this.dim.x = x;
-		this.dim.y = y;
-		this.dim.w = w;
-		this.dim.h = h;
-		this.dim.right = x + w;
-		this.dim.bottom = y + h;
-	}
-};
-
-function Player(x, y, r) {
-	this.dim = {
-		radius: r,
-		originalDim: {
-			radius: r,
-			x: x,
-			y: y
-		},
-		x: x,
-		y: y
-	}
-	this.drawType = 'arc';
-	this.update = (x, y, r) => {
-		this.dim.x = x;
-		this.dim.y = y;
-		this.dim.radius = r;
-	}
-};
-
 function Game(canvas) {
 	this.animation = new Animation();
 	this.physics = new Physics();
@@ -184,7 +145,27 @@ function Game(canvas) {
 		window.cancelAnimationFrame(this.animation.main);
 	}
 	this.worker = new Worker('/game/ui/js/game-worker.js?'+performance.now());
-};
+}
+
+function Obstacle(x, y, w, h) {
+	this.dim = {
+		x: x,
+		y: y,
+		w: w,
+		h: h,
+		right: x + w,
+		bottom: y + h
+	};
+	this.drawType = 'path';
+	this.update = (x, y, w, h) => {
+		this.dim.x = x;
+		this.dim.y = y;
+		this.dim.w = w;
+		this.dim.h = h;
+		this.dim.right = x + w;
+		this.dim.bottom = y + h;
+	}
+}
 
 function Physics() {}
 Physics.prototype.setObjectDimensions  = (piece) => {
@@ -223,7 +204,24 @@ Physics.prototype.setObjectDimensions  = (piece) => {
 	return dim;
 }
 
-
+function Player(x, y, r) {
+	this.dim = {
+		radius: r,
+		originalDim: {
+			radius: r,
+			x: x,
+			y: y
+		},
+		x: x,
+		y: y
+	}
+	this.drawType = 'arc';
+	this.update = (x, y, r) => {
+		this.dim.x = x;
+		this.dim.y = y;
+		this.dim.radius = r;
+	}
+}
 
 $(document).on('ready',function() {
 	var canvas = document.getElementById('game-board');
