@@ -1,223 +1,306 @@
-var game = {
-	animation: {
-		fps: 60,
-		fpsAsMilliseconds: null,
-		frameCount: null,
-		frameLength: null,
-		lastFrame: null,
-		main: null,
-		nextFrame: null,
-		// how many loops to perform per millisecond in each frame
-		// the higher the number, the faster the player moves
-		playerLoopsPerFrameMillisecond: 1
-	},
-	board: {
-		canvas: null,
-		context: null,
-		dimensions: {
-			height: null,
-			piece: null,
-			position: {
-				top: null,
-				right: null,
-				bottom: null,
-				left: null,
-				x: null,
-				y: null
-			},
-			xFromCenter: null,
-			yFromCenter: null,
-			width: null
-		},
-		obstacles: [],
-		obstacle: {
-			height: null,
-			piece: null,
-			position: {
-				top: null,
-				right: null,
-				bottom: null,
-				left: null,
-				x: null,
-				y: null
-			},
-			xFromCenter: null,
-			yFromCenter: null,
-			width: null
-		},
-		player: {
-			dim: {
-				'radius':0,
-				'originalDim': {
-					'radius': 0,
-					'x':0,
-					'y':0
-				},
-				'x':0,
-				'y':0
-			}
+function Animation() {
+	this.fps = 60,
+	this.fpsAsMilliseconds = 1000/this.fps,
+	this.frameCount = null,
+	this.frameLength = null,
+	this.lastFrame = null,
+	this.main = null,
+	this.nextFrame = null,
+	// how many loops to perform per millisecond in each frame
+	// the higher the number, the faster the player moves
+	this.playerLoopsPerFrameMillisecond = 1
+}
+
+function Board(canvas) {
+	this.canvas = canvas;
+	this.context = canvas.getContext('2d');
+	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
+	this.draw = (entity) => {
+		var ctx = this.context,
+			type = entity.drawType,
+			dim = entity.dim;
+		switch(type) {
+			case 'arc':
+				ctx.beginPath();
+				ctx.arc(dim.x, dim.y, dim.radius, 0, 2*Math.PI);
+				ctx.closePath();
+				ctx.stroke();
+			break;
+			case 'path':
+				ctx.beginPath();
+				ctx.moveTo(dim.x, dim.y);
+				ctx.lineTo(dim.x, dim.y + dim.h);
+				ctx.lineTo(dim.x + dim.w, dim.y + dim.h);
+				ctx.lineTo(dim.x + dim.w, dim.y);
+				ctx.closePath();	
+				ctx.fill();
+				ctx.stroke();
+			break;
 		}
-	},
-	controls: {
-		arrowKeys: ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'],
-		keywords: ['start'],
-		pressedKeys: {}
-	},
-	draw: {
-		player: function(ctx, dim) {
-			ctx.beginPath();
-			ctx.arc(dim.x, dim.y, dim.radius, 0, 2*Math.PI);
-			ctx.closePath();
-			ctx.stroke();
-		}
-	},
-	init: function() {
-		// get board dimensions
-		game.board.dimensions = $.extend(true, {}, game.board.dimensions);
-		game.values.setObjectDimensions(game.board.dimensions, $('#game-board'));
+	}
+	this.obstacles = [],
+	this.player = null
+}
+
+function Controls() {
+	this.keywords = ['start'];
+	this.arrowKeys = ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'];
+	this.pressedKeys = {};
+}
+
+function Flow() {
+	this.init = () => {
+	}
+	
+	this.pause = () => {
+	}
+	
+	this.run = () => {
+	}
+	
+	this.start = () => {
+	}
+	
+	this.stop = () => {
+	}
+}
+
+function Game(canvas) {
+	this.animation = new Animation();
+	this.board = new Board(canvas);
+	this.controls = new Controls();	
+	this.inputs = {
+		word: ''
+	}
+	this.physics = new Physics();
+	this.status = 'pending';
+	
+	this.init = () => {
+		// set up entities
+			// player
+		this.board.player = new Player(this.board.dimensions.width/2, this.board.dimensions.height/2, 5);
 		
-		game.board.player.dim = {
-			'radius': 5,
-			'originalDim': {
-				'radius': 5,
-				'x':(game.board.dimensions.width/2),
-				'y':(game.board.dimensions.height/2)
-			},
-			'x':(game.board.dimensions.width/2),
-			'y':(game.board.dimensions.height/2)
-		}
+			// obstacles
+				// top
+		this.board.obstacles.push(new Obstacle(
+			0, // x
+			0, // y
+			this.board.dimensions.width, // w
+			(this.board.dimensions.height / 2) - 30 // h
+		));
 		
-		// draw player
-		game.draw.player(game.board.context, game.board.player.dim);
-		ickyfoot.setUpKeyDetection(function(key,type) {
-			game.controls.pressedKeys[key] = (type == 'keydown' || type == 'keypress');
-			if (type == 'keydown') {
-				game.inputs.word += key
-				if (game.status == 'pending' && game.inputs.word == 'start') {
-					game.start();
-					game.inputs.word = '';
-				} else {
-					for (var i = 0; i < game.controls.keywords.length; i++)
-						game.inputs.word = (game.controls.keywords[i].indexOf(game.inputs.word) == -1) ? '' : game.inputs.word;
-				}
-			}		
-					
-			if (key == ' ') {
-				if (type == 'keydown' || type == 'keypress') {
-					if (game.status != 'over') {
-						game.status = (game.status == 'paused') ? 'playing' : 'paused';
-						if (game.status == 'paused') {
-							game.stop(game.status);
-						} else {
-							game.start();
-						}
-					}
-				} else return;
-			}
-			
-			if (key == 'Escape') {
-				if (type == 'keydown' || type == 'keypress') {
-					game.stop('over');
-					return;
-				} else return;
-			}
-		});
+				// bottom
+		this.board.obstacles.push(new Obstacle(
+			0, // x
+			(this.board.dimensions.height / 2) + 30, // y
+			this.board.dimensions.width, // w
+			(this.board.dimensions.height / 2) - 30 // h
+		));
 		
-		game.worker.onmessage = function(e) {
+		// draw entities
+		// player
+		this.board.draw(this.board.player);
+		
+		// obstacles
+		for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+		
+		// handle Game Worker callback
+		this.physics.worker.onmessage = (e) => {
 			var action, appData, data;
 			data = e.data;
 			action = data.action;
 			appData = data.appData;
+			this.animation.lastFrame = appData.lastFrame;
+			
 			switch (data.action) {
-				// handle Web Worker callback call for controlling the player
-				case 'control player':
+				// call for controlling the player
+				case 'move player':
+					var obstacleDims = [];
+					for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
+					
 					// clear board to prepare for next animation state
-					game.board.context.clearRect(0,0,game.board.dimensions.width,game.board.dimensions.height);
-					game.animation.lastFrame = appData.lastFrame;
-					game.board.player.dim.radius = appData.radius;
-					game.board.player.dim.x = appData.x;
-					game.board.player.dim.y = appData.y;
-					game.draw.player(game.board.context, game.board.player.dim);
+					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
+					
+					// update entities
+						// player
+					this.board.player.update(appData.x, appData.y, appData.radius);
+					
+						// obstacles
+						// PENDING ANIMATION OF OBSTACLES
+					
+					// draw entities
+						// player
+					this.board.draw(this.board.player);
+					
+						// obstacles
+					for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+			
+					if (appData.collision > -1) {
+						this.stop('over');
+					}
 				break;
 			}
-		};
-	},
-	inputs: {
-		word: ''
-	},
-	mode: false,
+		}
+	}
+	
 	// main loop
-	run: function() {
+	this.run = () => {
 		// see here for consistent frame rate logic:
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
-		game.animation.main = window.requestAnimationFrame(game.run);
-		if (game.status == 'playing' && game.animation.lastFrame !== null) {
+		this.animation.main = window.requestAnimationFrame(this.run);
+		if (this.status == 'playing' && this.animation.lastFrame !== null) {
 			// send info to Web Worker to determine if it's time to redraw
-			// redrawing is handled in game.worker callback defined in game.init
-			game.worker.postMessage({
-				'action': 'control player',
-				'appData': {
-					'now': performance.now(),
-					'lastFrame': game.animation.lastFrame,
-					'fpsAsMilliseconds': game.animation.fpsAsMilliseconds,
-					'player': game.board.player,
-					'board': {
-						'width': game.board.dimensions.width,
-						'height': game.board.dimensions.height
+			// redrawing is handled in this.worker callback defined in this.init
+			var obstacleDims = [];
+			for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
+			this.physics.worker.postMessage({
+				action: 'move player',
+				appData: {
+					now: performance.now(),
+					lastFrame: this.animation.lastFrame,
+					fpsAsMilliseconds: this.animation.fpsAsMilliseconds,
+					player: this.board.player.dim,
+					board: {
+						width: this.board.dimensions.width,
+						height: this.board.dimensions.height
 					},
-					'controls': game.controls
+					obstacles: obstacleDims,
+					controls: this.controls
 				}
 			});
 		}
-	},
-	start: function() {
-		game.animation.fpsAsMilliseconds = 1000/game.animation.fps;
-		game.animation.lastFrame = performance.now();
-		game.status = 'playing';
-		game.run();
-	},
-	status: 'pending',
-	stop: function(status) {
-		game.status = status;
-		window.cancelAnimationFrame(game.animation.main);
-	},
-	values: {
-		keywords: ['start'],
-		setObjectDimensions: function(obj, piece) {
-			obj.piece = piece;
-			obj.position.top = obj.piece.position().top;
-			obj.position.left = obj.piece.position().left;
-			obj.height = obj.piece.height();
-			obj.width = obj.piece.width();
-			obj.totalHeight = obj.height +  
-				parseInt(obj.piece.css('border-top-width')) +
-				parseInt(obj.piece.css('border-bottom-width')) +
-				parseInt(obj.piece.css('margin-top')) +
-				parseInt(obj.piece.css('margin-bottom')) +
-				parseInt(obj.piece.css('padding-top')) +
-				parseInt(obj.piece.css('padding-bottom'));
-			obj.totalWidth = obj.width + 
-				parseInt(obj.piece.css('border-left-width')) +
-				parseInt(obj.piece.css('border-right-width')) +
-				parseInt(obj.piece.css('margin-left')) +
-				parseInt(obj.piece.css('margin-right')) +
-				parseInt(obj.piece.css('padding-left')) +
-				parseInt(obj.piece.css('padding-right'));
-			obj.position.bottom = obj.position.top + obj.totalHeight;
-			obj.position.right = obj.position.left + obj.totalWidth;
-			obj.xFromCenter = (obj.totalWidth/2);
-			obj.yFromCenter = (obj.totalHeight/2);
-			obj.position.x = obj.position.left + obj.xFromCenter;
-			obj.position.y = obj.position.top + obj.yFromCenter;
-		}
-	},
-	worker: new Worker('/game/ui/js/game-worker.js?'+performance.now())
-};
+	}
+	
+	this.start = () => {
+		this.animation.lastFrame = performance.now();
+		this.status = 'playing';
+		this.run();
+	}
+	
+	this.stop = (status) => {
+		this.status = status;
+		window.cancelAnimationFrame(this.animation.main);
+	}
+}
+
+function Obstacle(x, y, w, h) {
+	this.dim = {
+		x: x,
+		y: y,
+		w: w,
+		h: h,
+		right: x + w,
+		bottom: y + h
+	};
+	this.drawType = 'path';
+	this.update = (x, y, w, h) => {
+		this.dim.x = x;
+		this.dim.y = y;
+		this.dim.w = w;
+		this.dim.h = h;
+		this.dim.right = x + w;
+		this.dim.bottom = y + h;
+	}
+}
+
+function Physics() {
+	this.worker = new Worker('/game/ui/js/physics-worker.js?'+performance.now());
+}
+Physics.prototype.setObjectDimensions  = (piece) => {
+	var dim = {
+		piece: piece,
+		height: piece.height(),
+		width: piece.width(),
+		totalHeight: (piece.height() +  
+			parseInt(piece.css('border-top-width')) +
+			parseInt(piece.css('border-bottom-width')) +
+			parseInt(piece.css('margin-top')) +
+			parseInt(piece.css('margin-bottom')) +
+			parseInt(piece.css('padding-top')) +
+			parseInt(piece.css('padding-bottom'))
+		),
+		totalWidth: (piece.width() + 
+			parseInt(piece.css('border-left-width')) +
+			parseInt(piece.css('border-right-width')) +
+			parseInt(piece.css('margin-left')) +
+			parseInt(piece.css('margin-right')) +
+			parseInt(piece.css('padding-left')) +
+			parseInt(piece.css('padding-right'))
+		),
+		position: {
+			top: piece.position().top,
+			left: piece.position().left
+		},
+	};
+	dim.position.bottom = dim.position.top + dim.totalHeight;
+	dim.position.right = dim.position.left + dim.totalWidth;
+	dim.xFromCenter = dim.totalWidth/2;
+	dim.yFromCenter = dim.totalWidth/2;
+	dim.position.x = dim.position.left + dim.xFromCenter;
+	dim.position.y = dim.position.top + dim.yFromCenter;
+	
+	return dim;
+}
+
+function Player(x, y, r) {
+	this.dim = {
+		radius: r,
+		originalDim: {
+			radius: r,
+			x: x,
+			y: y
+		},
+		x: x,
+		y: y
+	}
+	this.drawType = 'arc';
+	this.update = (x, y, r) => {
+		this.dim.x = x;
+		this.dim.y = y;
+		this.dim.radius = r;
+	}
+}
 
 $(document).on('ready',function() {
-	game.board.canvas = document.getElementById('game-board');
-	game.board.context = game.board.canvas.getContext('2d');
-	$(game.board.canvas).attr('width', $('#container').width());
-	$(game.board.canvas).attr('height', $('#container').height());
-	game.init();
+	var canvas = document.getElementById('game-board');
+	$(canvas).attr('width', $('#container').width());
+	$(canvas).attr('height', $('#container').height());
+	
+	// set up board
+	var game = new Game(canvas);
+	game.init();	
+		
+	ickyfoot.setUpKeyDetection(function(key,type) {
+		game.controls.pressedKeys[key] = (type == 'keydown' || type == 'keypress');
+		if (type == 'keydown') {
+			game.inputs.word += key
+			if (game.status == 'pending' && game.inputs.word == 'start') {
+				game.start();
+				game.inputs.word = '';
+			} else {
+				for (var i = 0; i < game.controls.keywords.length; i++)
+					game.inputs.word = (game.controls.keywords[i].indexOf(game.inputs.word) == -1) ? '' : game.inputs.word;
+			}
+		}		
+				
+		if (key == ' ') {
+			if (type == 'keydown' || type == 'keypress') {
+				if (game.status != 'over') {
+					game.status = (game.status == 'paused') ? 'playing' : 'paused';
+					if (game.status == 'paused') {
+						game.stop(game.status);
+					} else {
+						game.start();
+					}
+				}
+			} else return;
+		}
+		
+		if (key == 'Escape') {
+			if (type == 'keydown' || type == 'keypress') {
+				game.stop('over');
+				return;
+			} else return;
+		}
+	});
 });
