@@ -49,6 +49,9 @@ function Controls() {
 }
 
 function Flow() {
+	this.init = () => {
+	}
+	
 	this.pause = () => {
 	}
 	
