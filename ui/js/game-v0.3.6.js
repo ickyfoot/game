@@ -134,6 +134,10 @@ function Game(canvas) {
 					
 						// obstacles
 					for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+			
+					if (appData.collision > -1) {
+						this.stop('over');
+					}
 				break;
 			}
 		}

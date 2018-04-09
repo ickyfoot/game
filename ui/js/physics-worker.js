@@ -1,6 +1,25 @@
 var physics = {
 	detectCollision: function(player, items) {
-		//for (var i = 0; i < items.length; i++) console.log(items[i]);
+		var playerTop = player.y - player.radius;
+		var playerBottom = player.y + player.radius;
+		var playerLeft = player.x - player.radius;
+		var playerRight = player.x + player.radius;
+		for (var i = 0; i < items.length; i++) {
+			if (
+					(
+						(playerBottom >= items[i].y && playerBottom <= items[i].bottom)
+							||
+						(playerTop >= items[i].y && playerTop <= items[i].bottom)
+					)
+						&&
+					(
+						(playerRight >= items[i].x && playerRight <= items[i].right)
+							||
+						(playerLeft >= items[i].x && playerLeft <= items[i].right)
+					)
+				) return i;
+		}
+		return -1;
 	},
 	detectEdge: function(player, board) {
 		var edge = (	
@@ -12,7 +31,7 @@ var physics = {
 		return edge;
 	},
 	getNewDimensions: function(data) {
-		var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta, 
+		var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta,
 			fullSpeed, throttledSpeed, tempRadius, tempX, tempY, tempDim, newPosition;
 		// determine if player piece movement or resizing should be throttled
 		fullSpeed = 5;
@@ -74,12 +93,13 @@ onmessage = function(e) {
 			var lastFrame, frameLength, dim, collision;
 			frameLength = appData.now - appData.lastFrame;
 			if (frameLength > appData.fpsAsMilliseconds) {
-				// set new lastFrame time
-				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
 				dim = physics.getNewDimensions(appData);
+				collision = physics.detectCollision(dim,appData.obstacles)
+				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
 				postMessage({
 					action: 'move player',
 					appData: {
+						collision: collision,
 						lastFrame: lastFrame,
 						radius: dim.radius,
 						x: dim.x,
