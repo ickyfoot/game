@@ -49,29 +49,30 @@ function Controls() {
 }
 
 function Game(canvas) {
-	this.animation = new Animation();
-	this.physics = new Physics();
 	this.board = new Board(canvas);
 	this.controls = new Controls();
+	this.animation = new Animation();
+	this.physics = new Physics();
 	this.init = () => {
 		// set up entities
-		// player
+			// player
 		this.board.player = new Player(this.board.dimensions.width/2, this.board.dimensions.height/2, 5);
 		
-		// obstacles
-		// top
+			// obstacles
+				// top
 		this.board.obstacles.push(new Obstacle(
-			0, 
-			0, 
-			this.board.dimensions.width, 
-			(this.board.dimensions.height / 2) - 30
+			0, // x
+			0, // y
+			this.board.dimensions.width, // w
+			(this.board.dimensions.height / 2) - 30 // h
 		));
 		
-		// bottom
+				// bottom
 		this.board.obstacles.push(new Obstacle(
-			0, (this.board.dimensions.height / 2) + 30, 
-			this.board.dimensions.width, 
-			(this.board.dimensions.height / 2) - 30
+			0, // x
+			(this.board.dimensions.height / 2) + 30, // y
+			this.board.dimensions.width, // w
+			(this.board.dimensions.height / 2) - 30 // h
 		));
 		
 		// draw entities
@@ -86,21 +87,26 @@ function Game(canvas) {
 			data = e.data;
 			action = data.action;
 			appData = data.appData;
+			this.animation.lastFrame = appData.lastFrame;
+			
 			switch (data.action) {
 				// handle Web Worker callback call for controlling the player
 				case 'control player':
 					// clear board to prepare for next animation state
 					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
-					this.animation.lastFrame = appData.lastFrame;
 					
 					// update entities
+						// player
 					this.board.player.update(appData.x, appData.y, appData.radius);
 					
+						// obstacles
+						// PENDING ANIMATION OF OBSTACLES
+					
 					// draw entities
-					// player
+						// player
 					this.board.draw(this.board.player);
 					
-					// obstacles
+						// obstacles
 					for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
 				break;
 			}
@@ -260,7 +266,7 @@ $(document).on('ready',function() {
 		
 		if (key == 'Escape') {
 			if (type == 'keydown' || type == 'keypress') {
-				this.stop('over');
+				game.stop('over');
 				return;
 			} else return;
 		}
