@@ -68,7 +68,15 @@ function Flow() {
 function Game(canvas) {
 	this.animation = new Animation();
 	this.board = new Board(canvas);
-	this.controls = new Controls();
+	this.controls = new Controls();	
+	this.inputs = {
+		word: ''
+	}
+	this.physics = new Physics();
+	this.status = 'pending';	
+	// using ?<performance.now()> to try to prevent browser caching
+	this.worker = new Worker('/game/ui/js/game-worker.js?'+performance.now());
+	
 	this.init = () => {
 		// set up entities
 			// player
@@ -130,12 +138,6 @@ function Game(canvas) {
 		};
 	}
 	
-	this.inputs = {
-		word: ''
-	}	
-	
-	this.physics = new Physics();
-	
 	// main loop
 	this.run = () => {
 		// see here for consistent frame rate logic:
@@ -167,15 +169,10 @@ function Game(canvas) {
 		this.run();
 	}
 	
-	this.status = 'pending';
-	
 	this.stop = (status) => {
 		this.status = status;
 		window.cancelAnimationFrame(this.animation.main);
 	}
-	
-	// using ?<performance.now()> to try to prevent browser caching
-	this.worker = new Worker('/game/ui/js/game-worker.js?'+performance.now());
 }
 
 function Obstacle(x, y, w, h) {
