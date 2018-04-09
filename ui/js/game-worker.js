@@ -1,11 +1,11 @@
 var game = {
 	player: {
 		currentDim: {
-			'radius': null,
-			'x': null,
-			'y': null
+			radius: null,
+			x: null,
+			y: null
 		},
-		detectCollision: function(player, item2) {			
+		detectEdge: function(player, item2) {
 			var collision = (	
 					player.y < 0
 				|| 	player.x >= item2.width
@@ -17,7 +17,7 @@ var game = {
 		},
 		getNewDimensions: function(data) {
 			var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta, 
-				fullSpeed, throttledSpeed, tempRadius, tempX, tempY, tempDim, finalPosition;
+				fullSpeed, throttledSpeed, tempRadius, tempX, tempY, tempDim, newPosition;
 			// determine if player piece movement or resizing should be throttled
 			fullSpeed = 5;
 			throttledSpeed = 2;
@@ -31,9 +31,9 @@ var game = {
 			radiusDelta = (!!zThrottle) ? throttledSpeed : fullSpeed;
 			
 			tempDim = {
-				'radius': data.player.radius,
-				'x': data.player.x,
-				'y': data.player.y
+				radius: data.player.radius,
+				x: data.player.x,
+				y: data.player.y
 			}
 			
 			// resize player piece
@@ -60,35 +60,36 @@ var game = {
 				}
 			}
 			
-			finalPosition = (!game.player.detectCollision(tempDim, data.board))
+			newPosition = (!game.player.detectEdge(tempDim, data.board))
 				? tempDim
 				: data.player;
 			
-			return finalPosition;
+			return newPosition;
 		}
 	}
 }
 
 onmessage = function(e) {			
-	var appData, action, metaData, utils;
+	var appData, action, metaData;
 	metaData = e.data;
 	appData = metaData.appData;
 	action = metaData.action;
 	switch (action) {
-		case 'control player':
-			var lastFrame, frameLength, dim;
+		case 'move player':
+			var lastFrame, frameLength, dim, collision;
 			frameLength = appData.now - appData.lastFrame;
 			if (frameLength > appData.fpsAsMilliseconds) {
 				// set new lastFrame time
 				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
 				dim = game.player.getNewDimensions(appData);
 				postMessage({
-					'action': 'control player',
-					'appData': {
-						'lastFrame': lastFrame,
-						'radius': dim.radius,
-						'x': dim.x,
-						'y': dim.y
+					action: 'move player',
+					collision: collision,
+					appData: {
+						lastFrame: lastFrame,
+						radius: dim.radius,
+						x: dim.x,
+						y: dim.y
 					}
 				});
 			}

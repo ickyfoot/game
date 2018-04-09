@@ -73,9 +73,7 @@ function Game(canvas) {
 		word: ''
 	}
 	this.physics = new Physics();
-	this.status = 'pending';	
-	// using ?<performance.now()> to try to prevent browser caching
-	this.worker = new Worker('/game/ui/js/game-worker.js?'+performance.now());
+	this.status = 'pending';
 	
 	this.init = () => {
 		// set up entities
@@ -106,8 +104,8 @@ function Game(canvas) {
 		// obstacles
 		for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
 		
-		// handle Web Worker callback
-		this.worker.onmessage = (e) => {
+		// handle Game Worker callback
+		this.physics.worker.onmessage = (e) => {
 			var action, appData, data;
 			data = e.data;
 			action = data.action;
@@ -116,7 +114,10 @@ function Game(canvas) {
 			
 			switch (data.action) {
 				// call for controlling the player
-				case 'control player':
+				case 'move player':
+					var obstacleDims = [];
+					for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
+					
 					// clear board to prepare for next animation state
 					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 					
@@ -135,7 +136,7 @@ function Game(canvas) {
 					for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
 				break;
 			}
-		};
+		}
 	}
 	
 	// main loop
@@ -146,18 +147,21 @@ function Game(canvas) {
 		if (this.status == 'playing' && this.animation.lastFrame !== null) {
 			// send info to Web Worker to determine if it's time to redraw
 			// redrawing is handled in this.worker callback defined in this.init
-			this.worker.postMessage({
-				'action': 'control player',
-				'appData': {
-					'now': performance.now(),
-					'lastFrame': this.animation.lastFrame,
-					'fpsAsMilliseconds': this.animation.fpsAsMilliseconds,
-					'player': this.board.player.dim,
-					'board': {
-						'width': this.board.dimensions.width,
-						'height': this.board.dimensions.height
+			var obstacleDims = [];
+			for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
+			this.physics.worker.postMessage({
+				action: 'move player',
+				appData: {
+					now: performance.now(),
+					lastFrame: this.animation.lastFrame,
+					fpsAsMilliseconds: this.animation.fpsAsMilliseconds,
+					player: this.board.player.dim,
+					board: {
+						width: this.board.dimensions.width,
+						height: this.board.dimensions.height
 					},
-					'controls': this.controls
+					obstacles: obstacleDims,
+					controls: this.controls
 				}
 			});
 		}
@@ -195,7 +199,9 @@ function Obstacle(x, y, w, h) {
 	}
 }
 
-function Physics() {}
+function Physics() {
+	this.worker = new Worker('/game/ui/js/physics-worker.js?'+performance.now());
+}
 Physics.prototype.setObjectDimensions  = (piece) => {
 	var dim = {
 		piece: piece,
