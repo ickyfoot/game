@@ -48,11 +48,24 @@ function Controls() {
 	this.pressedKeys = {};
 }
 
+function Flow() {
+	this.pause = () => {
+	}
+	
+	this.run = () => {
+	}
+	
+	this.start = () => {
+	}
+	
+	this.stop = () => {
+	}
+}
+
 function Game(canvas) {
+	this.animation = new Animation();
 	this.board = new Board(canvas);
 	this.controls = new Controls();
-	this.animation = new Animation();
-	this.physics = new Physics();
 	this.init = () => {
 		// set up entities
 			// player
@@ -82,6 +95,7 @@ function Game(canvas) {
 		// obstacles
 		for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
 		
+		// handle Web Worker callback
 		this.worker.onmessage = (e) => {
 			var action, appData, data;
 			data = e.data;
@@ -90,7 +104,7 @@ function Game(canvas) {
 			this.animation.lastFrame = appData.lastFrame;
 			
 			switch (data.action) {
-				// handle Web Worker callback call for controlling the player
+				// call for controlling the player
 				case 'control player':
 					// clear board to prepare for next animation state
 					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
@@ -111,11 +125,14 @@ function Game(canvas) {
 				break;
 			}
 		};
-	};
+	}
+	
 	this.inputs = {
 		word: ''
-	};
-	this.mode = false;
+	}	
+	
+	this.physics = new Physics();
+	
 	// main loop
 	this.run = () => {
 		// see here for consistent frame rate logic:
@@ -140,16 +157,21 @@ function Game(canvas) {
 			});
 		}
 	}
+	
 	this.start = () => {
 		this.animation.lastFrame = performance.now();
 		this.status = 'playing';
 		this.run();
-	},
+	}
+	
 	this.status = 'pending';
+	
 	this.stop = (status) => {
 		this.status = status;
 		window.cancelAnimationFrame(this.animation.main);
 	}
+	
+	// using ?<performance.now()> to try to prevent browser caching
 	this.worker = new Worker('/game/ui/js/game-worker.js?'+performance.now());
 }
 
