@@ -1,5 +1,5 @@
-var physics = {
-	detectCollision: function(player, items) {
+function Physics() {
+	this.detectCollision = (player, items) => {
 		var playerTop = player.y - player.radius;
 		var playerBottom = player.y + player.radius;
 		var playerLeft = player.x - player.radius;
@@ -20,17 +20,23 @@ var physics = {
 				) return i;
 		}
 		return -1;
-	},
-	detectEdge: function(player, board) {
+	}
+	
+	this.detectEdge = (player, board) => {
+		var playerTop = player.y - player.radius;
+		var playerBottom = player.y + player.radius;
+		var playerLeft = player.x - player.radius;
+		var playerRight = player.x + player.radius;
 		var edge = (	
-				player.y < 0
-			|| 	player.x >= board.width
-			|| 	player.y > board.height
-			|| 	player.x <= 0
+				playerTop <= 0
+			|| 	playerRight >= board.width
+			|| 	playerBottom >= board.height
+			|| 	playerLeft <= 0
 		);
 		return edge;
-	},
-	getNewDimensions: function(data) {
+	}
+	
+	this.getNewDimensions = (data) => {
 		var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta,
 			fullSpeed, throttledSpeed, tempRadius, tempX, tempY, tempDim, newPosition;
 		// determine if player piece movement or resizing should be throttled
@@ -75,7 +81,7 @@ var physics = {
 			}
 		}
 		
-		newPosition = (!physics.detectEdge(tempDim, data.board))
+		newPosition = (!this.detectEdge(tempDim, data.board))
 			? tempDim
 			: data.player;
 		
@@ -83,7 +89,8 @@ var physics = {
 	}
 }
 
-onmessage = function(e) {			
+onmessage = function(e) {
+	var physics = new Physics();
 	var appData, action, metaData;
 	metaData = e.data;
 	appData = metaData.appData;
