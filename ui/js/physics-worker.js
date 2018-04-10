@@ -102,7 +102,6 @@ onmessage = function(e) {
 			if (frameLength > appData.fpsAsMilliseconds) {
 				dim = physics.getNewDimensions(appData);
 				collision = physics.detectCollision(dim,appData.obstacles)
-				if (collision > -1) console.log('collision with obstacle '+collision+'!');
 				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
 				postMessage({
 					action: 'move player',
