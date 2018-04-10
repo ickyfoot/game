@@ -49,10 +49,10 @@ function Board(canvas) {
 				this.rgba.blue,
 				this.rgba.opacity
 			));
-			if ((i % 3 == 0) || (i % 2 == 0)) {
-				if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
-				else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
-			} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
+			//if ((i % 3 == 0) || (i % 2 == 0)) {
+			//	if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
+			//	else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
+			//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 			
 			diffOffset = (diffOffset < 0)
 				? (bottomHeight <= 100) 
@@ -84,7 +84,7 @@ function Board(canvas) {
 				this.context.closePath();
 				this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
 				this.context.fill();
-				this.context.stroke();
+				//this.context.stroke();
 			break;
 		}
 	}
@@ -92,9 +92,9 @@ function Board(canvas) {
 	this.obstaclePathMinHeight = 200;
 	this.obstacles = [];
 	this.rgba = {
-		red: 0,
-		green: 0,
-		blue: 0,
+		red: 20,
+		green: 35,
+		blue: 152,
 		opacity: 1.0
 	}
 	this.yDiff = Physics.prototype.getRandomInteger(3,20);
