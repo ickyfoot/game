@@ -21,7 +21,6 @@ function Board(canvas) {
 		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
 		var pathPadding = this.obstaclePathMinHeight / 2;
 		var currentX = ((this.obstacles.length / 2) * obstacleWidth);
-		var diffOffset = 50;
 		for (var i = 0; i < availableSpaces; i++) {
 			var topHeight = ((this.dimensions.height / 2) - this.yDiff) - pathPadding;
 			var bottomY = topHeight + this.obstaclePathMinHeight;
@@ -49,22 +48,26 @@ function Board(canvas) {
 				this.rgba.blue,
 				this.rgba.opacity
 			));
-			//if ((i % 3 == 0) || (i % 2 == 0)) {
-			//	if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
-			//	else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
-			//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
+			if ((i % 3 == 0) || (i % 2 == 0)) {
+				if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
+				else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
+			} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 			
-			diffOffset = (diffOffset < 0)
+			this.diffOffset += (this.diffOffset < 0) ? i : -i;
+			this.diffOffset = (this.diffOffset > 50) ? this.diffOffset - i : this.diffOffset;
+			this.diffOffset = (this.diffOffset < -50) ? this.diffOffset + i : this.diffOffset;
+			this.diffOffset = (this.diffOffset < 0)
 				? (bottomHeight <= 100) 
-					? 20 
-					: Physics.prototype.toggleValue(20,-20)
-				: (topHeight <= 20) 
-					? -20 
-					: Physics.prototype.toggleValue(20,-20);
-			this.yDiff = Physics.prototype.getRandomInteger(this.yDiff,this.yDiff + diffOffset);
+					? this.diffOffset 
+					: Physics.prototype.toggleValue(this.diffOffset,-this.diffOffset)
+				: (topHeight <= 100) 
+					? -this.diffOffset
+					: Physics.prototype.toggleValue(this.diffOffset,-this.diffOffset);
+			this.yDiff = Physics.prototype.getRandomInteger(this.yDiff,this.yDiff + this.diffOffset);
 			currentX += obstacleWidth;
 		}
 	}
+	this.diffOffset = 10;
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
 	this.draw = (entity) => {
 		switch(entity.drawType) {
