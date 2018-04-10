@@ -17,9 +17,9 @@ function Physics() {
 							||
 						(playerLeft >= items[i].dim.x && playerLeft <= items[i].dim.right)
 					)
-				) return i;
+				) return items[i];
 		}
-		return -1;
+		return null;
 	}
 	
 	this.detectEdge = (player, board) => {

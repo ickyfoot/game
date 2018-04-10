@@ -54,13 +54,13 @@ function Board(canvas) {
 			//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 			
 			this.diffOffset += (this.diffOffset < 0) ? i : -i;
-			this.diffOffset = (this.diffOffset > 50) ? this.diffOffset - i : this.diffOffset;
-			this.diffOffset = (this.diffOffset < -50) ? this.diffOffset + i : this.diffOffset;
+			this.diffOffset = (this.diffOffset > 40) ? this.diffOffset - i : this.diffOffset;
+			this.diffOffset = (this.diffOffset < -40) ? this.diffOffset + i : this.diffOffset;
 			this.diffOffset = (this.diffOffset < 0)
-				? (bottomY <= 50) 
+				? (bottomY <= 100) 
 					? this.diffOffset 
 					: Physics.prototype.toggleValue(this.diffOffset,-this.diffOffset)
-				: (topHeight <= 50) 
+				: (topHeight <= 100) 
 					? -this.diffOffset
 					: Physics.prototype.toggleValue(this.diffOffset,-this.diffOffset);
 			this.yDiff = Physics.prototype.getRandomInteger(this.yDiff,this.yDiff + this.diffOffset);
@@ -111,7 +111,7 @@ function Board(canvas) {
 		blue: 200,
 		opacity: 1.0
 	}
-	this.yDiff = Physics.prototype.getRandomInteger(3,20);
+	this.yDiff = Physics.prototype.getRandomInteger(3,10);
 	this.player = null
 }
 
@@ -155,7 +155,7 @@ function Game(canvas) {
 		
 			// obstacles
 		this.board.createObstacles();
-		
+
 		// draw entities
 		// player
 		this.board.draw(this.board.player);
@@ -199,13 +199,12 @@ function Game(canvas) {
 						}
 					//}
 			
-					if (appData.collision > -1) {
+					if (appData.collision != null) {
 						this.stop('over');
 						this.board.player.collided = true;
-						this.board.obstacles[appData.collision].collided = true;
+						appData.collision.collided = true;
 						this.board.draw(this.board.player);
-						this.board.draw(this.board.obstacles[appData.collision]);
-						console.log('collision with obstacle '+appData.collision+'!');
+						this.board.draw(appData.collision);
 					}
 				break;
 			}
@@ -222,7 +221,13 @@ function Game(canvas) {
 			// redrawing is handled in this.worker callback defined in this.init
 			var obstacleDims = [];
 			this.board.animated = true;
-			//for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
+
+			var filteredObstacles = this.board.obstacles.filter((el) => {
+				return el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5);
+			});
+
+			console.log(filteredObstacles)
+
 			this.physics.worker.postMessage({
 				action: 'move player',
 				appData: {
@@ -234,7 +239,7 @@ function Game(canvas) {
 						width: this.board.dimensions.width,
 						height: this.board.dimensions.height
 					},
-					obstacles: this.board.obstacles,
+					obstacles: filteredObstacles,
 					controls: this.controls
 				}
 			});
