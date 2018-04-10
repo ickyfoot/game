@@ -14,30 +14,63 @@ function Animation() {
 function Board(canvas) {
 	this.canvas = canvas;
 	this.context = canvas.getContext('2d');
+	this.createObstacles = () => {
+		console.log('test');
+		var obstacleWidth = this.dimensions.width / this.obstacleCount;
+		console.log(obstacleWidth);
+		var availableSpace = this.dimensions.width - (this.obstacles.length * this.obstacleCount);
+		console.log(availableSpace);
+		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
+		console.log(availableSpaces);
+		var pathPadding = this.obstaclePathMinHeight / 2;
+		var currentX = 0;
+		for (var i = 0; i < availableSpaces; i++) {
+			var yDivisor = (Math.floor(Math.random() * 3) + 2);
+			var topHeight = (this.dimensions.height / yDivisor) - pathPadding;
+			var bottomY = topHeight + this.obstaclePathMinHeight;
+			var bottomHeight = this.dimensions.height - bottomY;
+			// top
+			this.obstacles.push(new Obstacle(
+				currentX, // x
+				0, // y
+				obstacleWidth, // w
+				topHeight // h
+			));
+			
+			// bottom
+			this.obstacles.push(new Obstacle(
+				currentX, // x
+				bottomY, // y
+				obstacleWidth, // w
+				bottomHeight // h
+			));
+			
+			currentX += obstacleWidth;
+		}
+	}
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
 	this.draw = (entity) => {
-		var ctx = this.context,
-			type = entity.drawType,
-			dim = entity.dim;
-		switch(type) {
+		switch(entity.drawType) {
 			case 'arc':
-				ctx.beginPath();
-				ctx.arc(dim.x, dim.y, dim.radius, 0, 2*Math.PI);
-				ctx.closePath();
-				ctx.stroke();
+				this.context.beginPath();
+				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
+				this.context.closePath();
+				this.context.stroke();
 			break;
 			case 'path':
-				ctx.beginPath();
-				ctx.moveTo(dim.x, dim.y);
-				ctx.lineTo(dim.x, dim.y + dim.h);
-				ctx.lineTo(dim.x + dim.w, dim.y + dim.h);
-				ctx.lineTo(dim.x + dim.w, dim.y);
-				ctx.closePath();	
-				ctx.fill();
-				ctx.stroke();
+				this.context.beginPath();
+				this.context.moveTo(entity.dim.x, entity.dim.y);
+				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
+				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y + entity.dim.h);
+				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
+				this.context.closePath();	
+				this.context.fill();
+				this.context.stroke();
 			break;
 		}
 	}
+	this.obstacleCount = 100;
+	this.obstaclePathMinHeight = 60;
 	this.obstacles = [],
 	this.player = null
 }
@@ -81,21 +114,8 @@ function Game(canvas) {
 		this.board.player = new Player(this.board.dimensions.width/2, this.board.dimensions.height/2, 5);
 		
 			// obstacles
-				// top
-		this.board.obstacles.push(new Obstacle(
-			0, // x
-			0, // y
-			this.board.dimensions.width, // w
-			(this.board.dimensions.height / 2) - 30 // h
-		));
-		
-				// bottom
-		this.board.obstacles.push(new Obstacle(
-			0, // x
-			(this.board.dimensions.height / 2) + 30, // y
-			this.board.dimensions.width, // w
-			(this.board.dimensions.height / 2) - 30 // h
-		));
+		this.board.createObstacles();
+		console.log(this.board.obstacles);
 		
 		// draw entities
 		// player
@@ -206,7 +226,7 @@ function Obstacle(x, y, w, h) {
 function Physics() {
 	this.worker = new Worker('/game/ui/js/physics-worker.js?'+performance.now());
 }
-Physics.prototype.setObjectDimensions  = (piece) => {
+Physics.prototype.setObjectDimensions = (piece) => {
 	var dim = {
 		piece: piece,
 		height: piece.height(),
