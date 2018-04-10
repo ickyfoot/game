@@ -74,6 +74,11 @@ function Board(canvas) {
 			case 'arc':
 				this.context.beginPath();
 				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
+				if (!!entity.collided) {
+					this.context.strokeStyle = 'rgba(200,20,20,1.0)';
+				} else {
+					this.context.strokeStyle = 'rgba(20,20,20,1.0)';
+				}
 				this.context.closePath();
 				this.context.stroke();
 			break;
@@ -85,11 +90,13 @@ function Board(canvas) {
 				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y + entity.dim.h);
 				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
 				this.context.closePath();
-				this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-				if (!!entity.collided)
+				if (!!entity.collided) {
+					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-				else
+				} else {
+					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
 					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
+				}
 				this.context.fill();
 				this.context.stroke();
 			break;
@@ -194,7 +201,9 @@ function Game(canvas) {
 			
 					if (appData.collision > -1) {
 						this.stop('over');
+						this.board.player.collided = true;
 						this.board.obstacles[appData.collision].collided = true;
+						this.board.draw(this.board.player);
 						this.board.draw(this.board.obstacles[appData.collision]);
 						console.log('collision with obstacle '+appData.collision+'!');
 					}
