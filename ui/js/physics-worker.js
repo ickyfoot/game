@@ -7,15 +7,15 @@ function Physics() {
 		for (var i = 0; i < items.length; i++) {
 			if (
 					(
-						(playerBottom >= items[i].y && playerBottom <= items[i].bottom)
+						(playerBottom >= items[i].dim.y && playerBottom <= items[i].dim.bottom)
 							||
-						(playerTop >= items[i].y && playerTop <= items[i].bottom)
+						(playerTop >= items[i].dim.y && playerTop <= items[i].dim.bottom)
 					)
 						&&
 					(
-						(playerRight >= items[i].x && playerRight <= items[i].right)
+						(playerRight >= items[i].dim.x && playerRight <= items[i].dim.right)
 							||
-						(playerLeft >= items[i].x && playerLeft <= items[i].right)
+						(playerLeft >= items[i].dim.x && playerLeft <= items[i].dim.right)
 					)
 				) return i;
 		}
@@ -102,6 +102,7 @@ onmessage = function(e) {
 			if (frameLength > appData.fpsAsMilliseconds) {
 				dim = physics.getNewDimensions(appData);
 				collision = physics.detectCollision(dim,appData.obstacles)
+				if (collision > -1) console.log('collision with obstacle '+collision+'!');
 				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
 				postMessage({
 					action: 'move player',

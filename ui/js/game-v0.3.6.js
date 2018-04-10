@@ -1,5 +1,5 @@
 function Animation() {
-	this.fps = 60,
+	this.fps = 30,
 	this.fpsAsMilliseconds = 1000/this.fps,
 	this.frameCount = null,
 	this.frameLength = null,
@@ -12,29 +12,30 @@ function Animation() {
 }
 
 function Board(canvas) {
+	this.animated = false;
 	this.canvas = canvas;
 	this.context = canvas.getContext('2d');
-	this.createObstacles = () => {
-		console.log('test');
+	this.createObstacles = (report) => {
 		var obstacleWidth = this.dimensions.width / this.obstacleCount;
-		console.log(obstacleWidth);
-		var availableSpace = this.dimensions.width - (this.obstacles.length * this.obstacleCount);
-		console.log(availableSpace);
+		var availableSpace = this.dimensions.width - ((this.obstacles.length / 2) * obstacleWidth);
 		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
-		console.log(availableSpaces);
 		var pathPadding = this.obstaclePathMinHeight / 2;
-		var currentX = 0;
+		var currentX = ((this.obstacles.length / 2) * obstacleWidth);
+		var diffOffset = 50;
 		for (var i = 0; i < availableSpaces; i++) {
-			var yDivisor = (Math.floor(Math.random() * 3) + 2);
-			var topHeight = (this.dimensions.height / yDivisor) - pathPadding;
+			var topHeight = ((this.dimensions.height / 2) - this.yDiff) - pathPadding;
 			var bottomY = topHeight + this.obstaclePathMinHeight;
 			var bottomHeight = this.dimensions.height - bottomY;
 			// top
 			this.obstacles.push(new Obstacle(
 				currentX, // x
 				0, // y
-				obstacleWidth, // w
-				topHeight // h
+				obstacleWidth, // width
+				topHeight, // height
+				this.rgba.red,
+				this.rgba.green,
+				this.rgba.blue,
+				this.rgba.opacity
 			));
 			
 			// bottom
@@ -42,9 +43,25 @@ function Board(canvas) {
 				currentX, // x
 				bottomY, // y
 				obstacleWidth, // w
-				bottomHeight // h
+				bottomHeight, // h
+				this.rgba.red,
+				this.rgba.green,
+				this.rgba.blue,
+				this.rgba.opacity
 			));
+			if ((i % 3 == 0) || (i % 2 == 0)) {
+				if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
+				else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
+			} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 			
+			diffOffset = (diffOffset < 0)
+				? (bottomHeight <= 100) 
+					? 20 
+					: Physics.prototype.toggleValue(20,-20)
+				: (topHeight <= 20) 
+					? -20 
+					: Physics.prototype.toggleValue(20,-20);
+			this.yDiff = Physics.prototype.getRandomInteger(this.yDiff,this.yDiff + diffOffset);
 			currentX += obstacleWidth;
 		}
 	}
@@ -58,20 +75,29 @@ function Board(canvas) {
 				this.context.stroke();
 			break;
 			case 'path':
+				entity.dim.x = (!!this.animated) ? entity.dim.x - entity.dim.w : entity.dim.x;
 				this.context.beginPath();
 				this.context.moveTo(entity.dim.x, entity.dim.y);
 				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
 				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y + entity.dim.h);
 				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
-				this.context.closePath();	
+				this.context.closePath();
+				this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
 				this.context.fill();
 				this.context.stroke();
 			break;
 		}
 	}
-	this.obstacleCount = 100;
-	this.obstaclePathMinHeight = 60;
-	this.obstacles = [],
+	this.obstacleCount = 150;
+	this.obstaclePathMinHeight = 200;
+	this.obstacles = [];
+	this.rgba = {
+		red: 0,
+		green: 0,
+		blue: 0,
+		opacity: 1.0
+	}
+	this.yDiff = Physics.prototype.getRandomInteger(3,20);
 	this.player = null
 }
 
@@ -111,11 +137,10 @@ function Game(canvas) {
 	this.init = () => {
 		// set up entities
 			// player
-		this.board.player = new Player(this.board.dimensions.width/2, this.board.dimensions.height/2, 5);
+		this.board.player = new Player(15, this.board.dimensions.height/2, 5);
 		
 			// obstacles
 		this.board.createObstacles();
-		console.log(this.board.obstacles);
 		
 		// draw entities
 		// player
@@ -146,18 +171,16 @@ function Game(canvas) {
 					this.board.player.update(appData.x, appData.y, appData.radius);
 					
 						// obstacles
-						// PENDING ANIMATION OF OBSTACLES
+					this.board.obstacles.splice(0,2);
+					this.board.createObstacles();
 					
 					// draw entities
 						// player
 					this.board.draw(this.board.player);
 					
-						// obstacles
 					for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
 			
-					if (appData.collision > -1) {
-						this.stop('over');
-					}
+					if (appData.collision > -1) this.stop('over');
 				break;
 			}
 		}
@@ -172,7 +195,8 @@ function Game(canvas) {
 			// send info to Web Worker to determine if it's time to redraw
 			// redrawing is handled in this.worker callback defined in this.init
 			var obstacleDims = [];
-			for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
+			this.board.animated = true;
+			//for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
 			this.physics.worker.postMessage({
 				action: 'move player',
 				appData: {
@@ -184,7 +208,7 @@ function Game(canvas) {
 						width: this.board.dimensions.width,
 						height: this.board.dimensions.height
 					},
-					obstacles: obstacleDims,
+					obstacles: this.board.obstacles,
 					controls: this.controls
 				}
 			});
@@ -203,7 +227,7 @@ function Game(canvas) {
 	}
 }
 
-function Obstacle(x, y, w, h) {
+function Obstacle(x, y, w, h, r, g, b, a) {
 	this.dim = {
 		x: x,
 		y: y,
@@ -212,20 +236,49 @@ function Obstacle(x, y, w, h) {
 		right: x + w,
 		bottom: y + h
 	};
+	this.rgba = {
+		red: r,
+		green: g,
+		blue: b,
+		opacity: a
+	};
 	this.drawType = 'path';
-	this.update = (x, y, w, h) => {
+	/*this.update = (x, y, w, h) => {
 		this.dim.x = x;
 		this.dim.y = y;
 		this.dim.w = w;
 		this.dim.h = h;
 		this.dim.right = x + w;
 		this.dim.bottom = y + h;
-	}
+	}*/
 }
+//Obstacle.prototype.update = (x, y, w, h) => {
+//}
 
 function Physics() {
 	this.worker = new Worker('/game/ui/js/physics-worker.js?'+performance.now());
 }
+
+// borrowed from https://stackoverflow.com/questions/4959975/generate-random-number-between-two-numbers-in-javascript#_=_
+// see second answer (by Francisc)
+Physics.prototype.getRandomInteger = (min,max) => {
+	return Math.floor(Math.random()*(max-min+1)+min);
+}
+
+Physics.prototype.modulateColor = (i) => {
+	var multiplier = Physics.prototype.getRandomInteger(1,5)
+	return (i == 0) 
+		? 10
+		: (i * multiplier > 255) 
+			? (i * multiplier) % 255
+			: i * multiplier;
+}
+
+Physics.prototype.toggleValue = (a, b) => {
+	var toggle = Physics.prototype.getRandomInteger(1,2);
+	return (toggle % 2 == 0) ? b : a;
+}
+
 Physics.prototype.setObjectDimensions = (piece) => {
 	var dim = {
 		piece: piece,
