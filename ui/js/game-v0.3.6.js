@@ -18,7 +18,7 @@ function Board(canvas) {
 	this.createObstacles = () => {
 		var obstacleWidth = this.dimensions.width / this.maxObstacles;
 		
-		// obstacles array length by 2 because the come in pairs
+		// divide obstacles array length by 2 because obstacles come in pairs
 		var availableSpace = this.dimensions.width - ((this.obstacles.length / 2) * obstacleWidth);
 		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
 		var pathPadding = this.obstaclePathMinHeight / 2;
