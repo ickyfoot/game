@@ -23,6 +23,8 @@ function Board(canvas) {
 		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
 		var pathPadding = this.obstaclePathMinHeight / 2;
 		var currentX = ((this.obstacles.length / 2) * obstacleWidth);
+		var pinnedToTop = 0;
+		var pinnedToBottom = 0;
 		for (var i = 0; i < availableSpaces; i++) {			
 			var yCenterOffset = this.yCenterOffset;
 			var yCenterOffsetMod = this.yCenterOffsetMod;
@@ -70,7 +72,8 @@ function Board(canvas) {
 				var topHeight = pathCenter - pathPadding;
 				
 				// ensure top obstacles always have a height of at least this.minObstacleHeight
-				topHeight = (topHeight < this.minObstacleHeight) ? this.minObstacleHeight : topHeight;
+				topHeight = (topHeight <= this.minObstacleHeight) ? this.minObstacleHeight : topHeight;
+				pinnedToTop = (topHeight <= this.minObstacleHeight) ? pinnedToTop + 1 : 0;
 				
 				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
 				var bottomY = topHeight + this.obstaclePathMinHeight;
@@ -80,6 +83,7 @@ function Board(canvas) {
 				bottomY = (this.dimensions.height - bottomY < this.minObstacleHeight) 
 					? this.dimensions.height - this.minObstacleHeight 
 					: bottomY;
+				pinnedToBottom = (this.dimensions.height - bottomY < this.minObstacleHeight) ? pinnedToBottom + 1 : 0;
 				
 				// set bottomHeight
 				var bottomHeight = this.dimensions.height - bottomY;
@@ -100,6 +104,11 @@ function Board(canvas) {
 					: (pathCenter == maxPathCenter) 
 						? -Math.abs(yCenterOffsetMod)
 						: yCenterOffsetMod;
+				console.log(pinnedToTop);
+				console.log(pinnedToBottom);
+				yCenterOffset = (pinnedToTop > 50 || pinnedToBottom > 50)
+					? (this.dimensions.height / 2 - 35) 
+					: yCenterOffset;
 			}
 			
 			// randomize the amount by which y is offset
@@ -129,6 +138,8 @@ function Board(canvas) {
 				this.rgba.blue,
 				this.rgba.opacity
 			));
+			
+			//randomize color
 			//if ((i % 3 == 0) || (i % 2 == 0)) {
 			//	if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
 			//	else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
