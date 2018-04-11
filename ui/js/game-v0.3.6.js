@@ -24,6 +24,10 @@ function Board(canvas) {
 		var pathPadding = this.obstaclePathMinHeight / 2;
 		var currentX = ((this.obstacles.length / 2) * obstacleWidth);
 		for (var i = 0; i < availableSpaces; i++) {
+			/**
+			/* uncomment to have board travel vertically with path
+			/* also need to uncomment application of this.topAdjust in this.draw in 'path' switch case
+			
 			var yCenterOffset = this.yCenterOffset;
 			var yCenterOffsetMod = this.yCenterOffsetMod;
 			var pathCenter = (this.dimensions.height / 2) - yCenterOffset;
@@ -44,25 +48,90 @@ function Board(canvas) {
 				this.topAdjust = pathPadding + pathCenter;
 			
 			var topHeight = pathCenter - pathPadding;
-			// ensure top obstacles always have a height of at least this.minObstacleHeight
-			//topHeight = (topHeight < this.minObstacleHeight) ? this.minObstacleHeight : topHeight;
 			
 			// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
 			var bottomY = pathCenter + pathPadding;
 			
+			// set bottomHeight
+			var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;// increase difficulty as path progresses 
+			yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
+			
+			// ensure it doesn't get too difficult
+			yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
+				? yCenterOffsetMod - this.minObstacleHeight 
+				: yCenterOffsetMod;
+			yCenterOffsetMod = (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
+				? yCenterOffsetMod + this.minObstacleHeight 
+				: yCenterOffsetMod;
+			
+			// randomize y offset direction
+			yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
+			
+			// randomize the amount by which y is offset
+			this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
+			this.yCenterOffsetMod = yCenterOffsetMod; */
+			
+			
+			/**
+			/* uncomment from here down to obstacle creation if enabling vertical board travel with path */
+			
+			var yCenterOffset = this.yCenterOffset;
+			var yCenterOffsetMod = this.yCenterOffsetMod;
+			var pathCenter = (this.dimensions.height / 2) - yCenterOffset;
+			var minPathCenter = this.minObstacleHeight + pathPadding;
+			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
+			
+			var topHeight = pathCenter - pathPadding;
+			
+			// ensure top obstacles always have a height of at least this.minObstacleHeight
+			topHeight = (topHeight < this.minObstacleHeight) ? this.minObstacleHeight : topHeight;
+			
+			// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
+			var bottomY = topHeight + this.obstaclePathMinHeight;
+			
 			// ensure y coordinate is always at least this.minObstacleHeight less than board height
 			// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
-			/*bottomY = (this.dimensions.height - bottomY < this.minObstacleHeight) 
+			bottomY = (this.dimensions.height - bottomY < this.minObstacleHeight) 
 				? this.dimensions.height - this.minObstacleHeight 
-				: bottomY;*/
+				: bottomY;
 			
 			// set bottomHeight
-			var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;
+			var bottomHeight = this.dimensions.height - bottomY;
 			
 			// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
-			/*topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
+			topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
 				? bottomY - this.obstaclePathMinHeight 
-				: topHeight;*/
+				: topHeight;
+			
+			// increase difficulty as path progresses 
+			yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
+			
+			// ensure it doesn't get too difficult
+			yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
+				? yCenterOffsetMod - this.minObstacleHeight 
+				: yCenterOffsetMod;
+			yCenterOffsetMod = (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
+				? yCenterOffsetMod + this.minObstacleHeight 
+				: yCenterOffsetMod;
+			
+			// randomize y offset direction
+			yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
+			
+			// reset bounds of yCenterOffset if path is pinned to top or bottom
+			yCenterOffset = (pathCenter == minPathCenter) 
+				? Math.abs(yCenterOffset)
+				: (pathCenter == maxPathCenter) 
+					? -Math.abs(yCenterOffset)
+					: yCenterOffset;
+			yCenterOffsetMod = (pathCenter == minPathCenter) 
+				? Math.abs(yCenterOffsetMod)
+				: (pathCenter == maxPathCenter) 
+					? -Math.abs(yCenterOffsetMod)
+					: yCenterOffsetMod;
+			
+			// randomize the amount by which y is offset
+			this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
+			this.yCenterOffsetMod = yCenterOffsetMod;
 			
 			// create top obstacle and push into obstacles array
 			this.obstacles.push(new Obstacle(
@@ -95,36 +164,6 @@ function Board(canvas) {
 			
 			// update the x coordinates for the next pair of obstacles
 			currentX += obstacleWidth;
-			
-			// increase difficulty as path progresses 
-			yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
-			
-			// ensure it doesn't get too difficult
-			yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
-				? yCenterOffsetMod - this.minObstacleHeight 
-				: yCenterOffsetMod;
-			yCenterOffsetMod = (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
-				? yCenterOffsetMod + this.minObstacleHeight 
-				: yCenterOffsetMod;
-			
-			// randomize y offset direction
-			yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
-			
-			// reset bounds of yCenterOffset if path is pinned to top or bottom
-			/*yCenterOffset = (pathCenter == minPathCenter) 
-				? Math.abs(yCenterOffset)
-				: (pathCenter == maxPathCenter) 
-					? -Math.abs(yCenterOffset)
-					: yCenterOffset;
-			yCenterOffsetMod = (pathCenter == minPathCenter) 
-				? Math.abs(yCenterOffsetMod)
-				: (pathCenter == maxPathCenter) 
-					? -Math.abs(yCenterOffsetMod)
-					: yCenterOffsetMod;*/
-			
-			// randomize the amount by which y is offset
-			this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-			this.yCenterOffsetMod = yCenterOffsetMod;
 		}
 	}
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
@@ -143,6 +182,7 @@ function Board(canvas) {
 			break;
 			case 'path':
 				entity.dim.x = (!!this.animated) ? entity.dim.x - entity.dim.w : entity.dim.x;
+				// need to uncomment following two lines to enable board to travel vertically with path
 				entity.dim.y += this.topAdjust
 				entity.dim.h -= this.topAdjust;
 				this.context.beginPath();
