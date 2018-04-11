@@ -65,10 +65,9 @@ function Physics() {
 			tempDim.radius = data.player.originalDim.radius;
 		} else {
 			// resize player piece
-			if (!!data.controls.pressedKeys['ArrowLeft'] && !!data.controls.pressedKeys['ArrowRight']) {
+			if (!!data.controls.pressedKeys['g']) {
 				tempDim.radius = data.player.radius + radiusDelta;
-			} else if (!!data.controls.pressedKeys['ArrowUp'] && !!data.controls.pressedKeys['ArrowDown']
-					&& data.player.radius > 0) {
+			} else if (!!data.controls.pressedKeys['s'] && data.player.radius > 0) {
 				tempDim.radius = (data.player.radius - radiusDelta <= 0) 
 					? 0
 					: data.player.radius - radiusDelta;

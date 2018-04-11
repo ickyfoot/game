@@ -16,16 +16,55 @@ function Board(canvas) {
 	this.canvas = canvas;
 	this.context = canvas.getContext('2d');
 	this.createObstacles = () => {
-		var obstacleWidth = this.dimensions.width / this.obstacleCount;
+		var obstacleWidth = this.dimensions.width / this.maxObstacles;
+		
+		// obstacles array length by 2 because the come in pairs
 		var availableSpace = this.dimensions.width - ((this.obstacles.length / 2) * obstacleWidth);
 		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
 		var pathPadding = this.obstaclePathMinHeight / 2;
 		var currentX = ((this.obstacles.length / 2) * obstacleWidth);
 		for (var i = 0; i < availableSpaces; i++) {
-			var topHeight = ((this.dimensions.height / 2) - this.yDiff) - pathPadding;
-			var bottomY = topHeight + this.obstaclePathMinHeight;
-			var bottomHeight = this.dimensions.height - bottomY;
-			// top
+			var yCenterOffset = this.yCenterOffset;
+			var yCenterOffsetMod = this.yCenterOffsetMod;
+			var pathCenter = (this.dimensions.height / 2) - yCenterOffset;
+			var minPathCenter = this.minObstacleHeight + pathPadding;
+			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
+			
+			if (pathCenter < pathPadding) 
+				console.log('encroaching on top.');
+			
+			if (pathCenter > (this.dimensions.height - pathPadding))
+				console.log('encroaching on bottom.');
+			
+			this.topAdjust = 0;
+			if (pathCenter < pathPadding) 
+				this.topAdjust = pathPadding - pathCenter;
+			
+			if (pathCenter > (this.dimensions.height - pathPadding)) 
+				this.topAdjust = pathPadding + pathCenter;
+			
+			var topHeight = pathCenter - pathPadding;
+			// ensure top obstacles always have a height of at least this.minObstacleHeight
+			//topHeight = (topHeight < this.minObstacleHeight) ? this.minObstacleHeight : topHeight;
+			
+			// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
+			var bottomY = pathCenter + pathPadding;
+			
+			// ensure y coordinate is always at least this.minObstacleHeight less than board height
+			// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
+			/*bottomY = (this.dimensions.height - bottomY < this.minObstacleHeight) 
+				? this.dimensions.height - this.minObstacleHeight 
+				: bottomY;*/
+			
+			// set bottomHeight
+			var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;
+			
+			// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
+			/*topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
+				? bottomY - this.obstaclePathMinHeight 
+				: topHeight;*/
+			
+			// create top obstacle and push into obstacles array
 			this.obstacles.push(new Obstacle(
 				currentX, // x
 				0, // y
@@ -37,7 +76,7 @@ function Board(canvas) {
 				this.rgba.opacity
 			));
 			
-			// bottom
+			// create bottom obstacle and push into obstacles array
 			this.obstacles.push(new Obstacle(
 				currentX, // x
 				bottomY, // y
@@ -53,21 +92,41 @@ function Board(canvas) {
 			//	else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
 			//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 			
-			this.diffOffset += (this.diffOffset < 0) ? i : -i;
-			this.diffOffset = (this.diffOffset > 40) ? this.diffOffset - i : this.diffOffset;
-			this.diffOffset = (this.diffOffset < -40) ? this.diffOffset + i : this.diffOffset;
-			this.diffOffset = (this.diffOffset < 0)
-				? (bottomY <= 100) 
-					? this.diffOffset 
-					: Physics.prototype.toggleValue(this.diffOffset,-this.diffOffset)
-				: (topHeight <= 100) 
-					? -this.diffOffset
-					: Physics.prototype.toggleValue(this.diffOffset,-this.diffOffset);
-			this.yDiff = Physics.prototype.getRandomInteger(this.yDiff,this.yDiff + this.diffOffset);
+			
+			// update the x coordinates for the next pair of obstacles
 			currentX += obstacleWidth;
+			
+			// increase difficulty as path progresses 
+			yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
+			
+			// ensure it doesn't get too difficult
+			yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
+				? yCenterOffsetMod - this.minObstacleHeight 
+				: yCenterOffsetMod;
+			yCenterOffsetMod = (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
+				? yCenterOffsetMod + this.minObstacleHeight 
+				: yCenterOffsetMod;
+			
+			// randomize y offset direction
+			yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
+			
+			// reset bounds of yCenterOffset if path is pinned to top or bottom
+			/*yCenterOffset = (pathCenter == minPathCenter) 
+				? Math.abs(yCenterOffset)
+				: (pathCenter == maxPathCenter) 
+					? -Math.abs(yCenterOffset)
+					: yCenterOffset;
+			yCenterOffsetMod = (pathCenter == minPathCenter) 
+				? Math.abs(yCenterOffsetMod)
+				: (pathCenter == maxPathCenter) 
+					? -Math.abs(yCenterOffsetMod)
+					: yCenterOffsetMod;*/
+			
+			// randomize the amount by which y is offset
+			this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
+			this.yCenterOffsetMod = yCenterOffsetMod;
 		}
 	}
-	this.diffOffset = 10;
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
 	this.draw = (entity) => {
 		switch(entity.drawType) {
@@ -84,6 +143,8 @@ function Board(canvas) {
 			break;
 			case 'path':
 				entity.dim.x = (!!this.animated) ? entity.dim.x - entity.dim.w : entity.dim.x;
+				entity.dim.y += this.topAdjust
+				entity.dim.h -= this.topAdjust;
 				this.context.beginPath();
 				this.context.moveTo(entity.dim.x, entity.dim.y);
 				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
@@ -102,7 +163,9 @@ function Board(canvas) {
 			break;
 		}
 	}
-	this.obstacleCount = 150;
+	this.maxObstacles = 150;
+	this.maxYCenterOffsetMod = 40;
+	this.minObstacleHeight = 40;
 	this.obstaclePathMinHeight = 200;
 	this.obstacles = [];
 	this.rgba = {
@@ -111,7 +174,15 @@ function Board(canvas) {
 		blue: 200,
 		opacity: 1.0
 	}
-	this.yDiff = Physics.prototype.getRandomInteger(3,10);
+	
+	// the amount by which the board must shift vertically to follow path
+	this.topAdjust = 0;
+	
+	// the amount by which to offset the y value from vertical center
+	this.yCenterOffset = Physics.prototype.getRandomInteger(3,10);
+	
+	// the amount by which yCenterOffset varies from one obstacle to the next
+	this.yCenterOffsetMod = 10;
 	this.player = null
 }
 
@@ -226,8 +297,6 @@ function Game(canvas) {
 				return el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5);
 			});
 
-			console.log(filteredObstacles)
-
 			this.physics.worker.postMessage({
 				action: 'move player',
 				appData: {
@@ -258,7 +327,7 @@ function Game(canvas) {
 	}
 }
 
-function Obstacle(x, y, w, h, r, g, b, a, i) {
+function Obstacle(x, y, w, h, r, g, b, a) {
 	this.dim = {
 		x: x,
 		y: y,
@@ -267,24 +336,14 @@ function Obstacle(x, y, w, h, r, g, b, a, i) {
 		right: x + w,
 		bottom: y + h
 	};
+	this.drawType = 'path';
 	this.rgba = {
 		red: r,
 		green: g,
 		blue: b,
 		opacity: a
 	};
-	this.drawType = 'path';
-	/*this.update = (x, y, w, h) => {
-		this.dim.x = x;
-		this.dim.y = y;
-		this.dim.w = w;
-		this.dim.h = h;
-		this.dim.right = x + w;
-		this.dim.bottom = y + h;
-	}*/
 }
-//Obstacle.prototype.update = (x, y, w, h) => {
-//}
 
 function Physics() {
 	this.worker = new Worker('/game/ui/js/physics-worker.js?'+performance.now());
