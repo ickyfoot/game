@@ -35,8 +35,6 @@ function Board(canvas) {
 			var pinned = (!!pinnedToTop || !!pinnedToBottom);
 			var topHeight = pathCenter - pathPadding;
 
-			console.log(pathCenter);
-
 			if (!!pinnedToTop) pathCenter = minPathCenter;
 
 			if (!!pinnedToBottom) pathCenter = maxPathCenter;
