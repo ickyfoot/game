@@ -103,13 +103,18 @@ function Board(canvas) {
 					? bottomY - this.obstaclePathMinHeight 
 					: topHeight;
 				
+				// unpin path from top or bottom if necessary
 				if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
 					yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) ? this.maxPinnedCount : this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
+						? this.maxPinnedCount 
+						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
 					this.pinnedToTopCount = 0;
 				} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
 					yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
-					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) ? this.maxPinnedCount : this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
+						? this.maxPinnedCount 
+						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
 					this.pinnedToBottomCount = 0;
 				}
 
@@ -190,9 +195,9 @@ function Board(canvas) {
 		}
 	}
 	this.maxObstacles = 150;
-	this.maxPinnedCount = 50;
+	this.maxPinnedCount = 15;
 	this.currentMaxPinnedCount = this.maxPinnedCount;
-	this.minPinnedCount = 10;
+	this.minPinnedCount = 3;
 	this.maxYCenterOffsetMod = 40;
 	this.minObstacleHeight = 40;
 	this.obstaclePathMinHeight = 200;
