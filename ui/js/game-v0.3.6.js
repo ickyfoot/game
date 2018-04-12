@@ -105,7 +105,7 @@ function Board(canvas) {
 				
 				// unpin path from top or bottom if necessary
 				if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
-					yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+					yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
 						? this.maxPinnedCount 
 						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
