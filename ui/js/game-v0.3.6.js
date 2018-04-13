@@ -17,12 +17,12 @@ function Board(canvas) {
 	this.context = canvas.getContext('2d');
 	this.createObstacles = () => {
 		var obstacleWidth = this.dimensions.width / this.maxObstacles;
-		
 		// divide obstacles array length by 2 because obstacles come in pairs
-		var availableSpace = this.dimensions.width - ((this.obstacles.length / 2) * obstacleWidth);
+		var obstaclesLength = (!!this.useLineTo) ? this.obstacles.top.length : this.obstacles.length;
+		var availableSpace = this.dimensions.width - ((obstaclesLength / 2) * obstacleWidth);
 		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
 		var pathPadding = this.obstaclePathMinHeight / 2;
-		var currentX = ((this.obstacles.length / 2) * obstacleWidth);
+		var currentX = ((obstaclesLength / 2) * obstacleWidth);
 		var minPathCenter = this.minObstacleHeight + pathPadding;
 		var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
 		for (var i = 0; i < availableSpaces; i++) {			
@@ -126,29 +126,34 @@ function Board(canvas) {
 				this.yCenterOffsetMod = yCenterOffsetMod;
 			}
 			
-			// create top obstacle and push into obstacles array
-			this.obstacles.push(new Obstacle(
-				currentX, // x
-				topY, // y
-				obstacleWidth, // width
-				topHeight, // height
-				this.rgba.red,
-				this.rgba.green,
-				this.rgba.blue,
-				this.rgba.opacity
-			));
-			
-			// create bottom obstacle and push into obstacles array
-			this.obstacles.push(new Obstacle(
-				currentX, // x
-				bottomY, // y
-				obstacleWidth, // w
-				bottomHeight, // h
-				this.rgba.red,
-				this.rgba.green,
-				this.rgba.blue,
-				this.rgba.opacity
-			));
+			if (!!this.useLineTo) {
+				this.obstacles.top.push([currentX,topHeight]);
+				this.obstacles.bottom.push([currentX,bottomY]);
+			} else {
+				// create top obstacle and push into obstacles array
+				this.obstacles.push(new Obstacle(
+					currentX, // x
+					topY, // y
+					obstacleWidth, // width
+					topHeight, // height
+					this.rgba.red,
+					this.rgba.green,
+					this.rgba.blue,
+					this.rgba.opacity
+				));
+				
+				// create bottom obstacle and push into obstacles array
+				this.obstacles.push(new Obstacle(
+					currentX, // x
+					bottomY, // y
+					obstacleWidth, // w
+					bottomHeight, // h
+					this.rgba.red,
+					this.rgba.green,
+					this.rgba.blue,
+					this.rgba.opacity
+				));
+			}
 			
 			//randomize color
 			//if ((i % 3 == 0) || (i % 2 == 0)) {
@@ -161,8 +166,9 @@ function Board(canvas) {
 		}
 	}
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
-	this.draw = (entity) => {
-		switch(entity.drawType) {
+	this.draw = (entity, type) => {
+		drawType = (typeof type != 'undefined') ? type : entity.drawType;
+		switch(drawType) {
 			case 'arc':
 				this.context.beginPath();
 				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
@@ -176,9 +182,10 @@ function Board(canvas) {
 			break;
 			case 'path':
 				entity.dim.x = (!!this.animated) ? entity.dim.x - entity.dim.w : entity.dim.x;
-				// need to uncomment following two lines to enable board to travel vertically with path
-				entity.dim.y += this.topAdjust
-				entity.dim.h -= this.topAdjust;
+				if (!!this.travelWithPath) {
+					entity.dim.y += this.topAdjust
+					entity.dim.h -= this.topAdjust;
+				}
 				this.context.beginPath();
 				this.context.moveTo(entity.dim.x, entity.dim.y);
 				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
@@ -192,6 +199,46 @@ function Board(canvas) {
 					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
 					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
 				}
+				this.context.fill();
+				this.context.stroke();
+			break;
+			case 'lineTo':
+				if (!!entity.collided) {
+					this.context.fillStyle = 'rgba(200,'+this.rgba.green+',20,'+this.rgba.opacity+')';
+					this.context.strokeStyle = 'rgba(200,'+this.rgba.green+',20,'+this.rgba.opacity+')';
+				} else {
+					this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+this.rgba.opacity+')';
+					this.context.strokeStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+this.rgba.opacity+')';
+				}
+
+				// draw top
+				this.context.beginPath();
+				this.context.moveTo(0, 0);
+				for (var i = 0; i < entity.top.length; i++) {
+					entity.top[i][0] -= (!!this.animated) ? 1 : 0;
+					if (!!this.travelWithPath) {
+						entity.top[i][1] += this.topAdjust
+					}
+					this.context.lineTo(entity.top[i][0], entity.top[i][1]);
+				}
+				this.context.lineTo(this.dimensions.width, 0);
+				this.context.closePath();
+				this.context.fill();
+				this.context.stroke();
+				
+				// draw bottom
+				this.context.beginPath();
+				this.context.moveTo(entity.bottom[0][0], entity.bottom[0][1]);
+				for (var i = 0; i < entity.bottom.length; i++) {
+					entity.bottom[i][0] -= (!!this.animated) ? 1 : 0;
+					if (!!this.travelWithPath) {
+						entity.bottom[i][1] += this.topAdjust
+					}
+					this.context.lineTo(entity.bottom[i][0], entity.bottom[i][1]);
+				}
+				this.context.lineTo(this.dimensions.width, this.dimensions.height);
+				this.context.lineTo(0, this.dimensions.height);
+				this.context.closePath();
 				this.context.fill();
 				this.context.stroke();
 			break;
@@ -224,9 +271,18 @@ function Board(canvas) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
+	this.useLineTo = false;
+	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
 	this.player = null
+	
+	if (!!this.useLineTo) {
+		this.obstacles = {
+			top: [],
+			bottom: []
+		}
+	}
 }
 
 function Controls() {
@@ -275,7 +331,11 @@ function Game(canvas) {
 		this.board.draw(this.board.player);
 		
 		// obstacles
-		for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+		if (!!this.board.useLineTo) {
+			this.board.draw(this.board.obstacles, 'lineTo');
+		} else {
+			for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+		}
 		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
@@ -299,7 +359,9 @@ function Game(canvas) {
 					this.board.player.update(appData.x, appData.y, appData.radius);
 					
 						// obstacles
-					this.board.obstacles.splice(0,2);
+					if (!this.board.useLineTo) {
+						this.board.obstacles.splice(0,2);
+					}
 					this.board.createObstacles();
 					
 					// draw entities
@@ -307,11 +369,11 @@ function Game(canvas) {
 					this.board.draw(this.board.player);
 					var frameLength = performance.now() - this.animation.lastFrame;
 					
-					//if (frameLength > this.animation.fpsAsMilliseconds) {
-						for (var i = 0; i < this.board.obstacles.length; i++) {
-							this.board.draw(this.board.obstacles[i]);
-						}
-					//}
+					if (!!this.board.useLineTo) {
+						this.board.draw(this.board.obstacles, 'lineTo');
+					} else {
+						for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+					}
 			
 					if (appData.collision != null) {
 						this.stop('over');
@@ -335,10 +397,20 @@ function Game(canvas) {
 			// redrawing is handled in this.worker callback defined in this.init
 			var obstacleDims = [];
 			this.board.animated = true;
-
-			var filteredObstacles = this.board.obstacles.filter((el) => {
-				return el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5);
-			});
+			
+			if (!!this.board.useLineTo) {
+				var filteredTopObstacles = this.board.obstacles.top.filter((el) => {
+					return (el.x > (this.board.player.dim.x - 5) && el.x < (this.board.player.dim.x + 5));
+				});
+				var filteredBottomObstacles = this.board.obstacles.top.filter((el) => {
+					return (el.x > (this.board.player.dim.x - 5) && el.x < (this.board.player.dim.x + 5));
+				});
+				var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+			} else {
+				var filteredObstacles = this.board.obstacles.filter((el) => {
+					return el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5);
+				});
+			}
 
 			this.physics.worker.postMessage({
 				action: 'move player',
