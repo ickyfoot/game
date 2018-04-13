@@ -18,13 +18,20 @@ function Board(canvas) {
 	this.createObstacles = () => {
 		var obstacleWidth = this.dimensions.width / this.maxObstacles;
 		// divide obstacles array length by 2 because obstacles come in pairs
-		var obstaclesLength = (!!this.useLineTo) ? this.obstacles.top.length : this.obstacles.length;
-		var availableSpace = this.dimensions.width - ((obstaclesLength / 2) * obstacleWidth);
+		var obstaclesLength = (!!this.useLineTo) ? this.obstacles.top.length : this.obstacles.length / 2;
+		var availableSpace = this.dimensions.width - (obstaclesLength * obstacleWidth);
 		var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
+
 		var pathPadding = this.obstaclePathMinHeight / 2;
-		var currentX = ((obstaclesLength / 2) * obstacleWidth);
+		// divide obstacles array length by 2 because obstacles come in pairs
+		var currentX = obstaclesLength * obstacleWidth;
 		var minPathCenter = this.minObstacleHeight + pathPadding;
 		var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
+		// add one more space if this is a strictly lineTo draw
+		// this is necessary because availableSpaces is calculated to determine how
+		// many rectangles of a given width can fit in the full board width
+		// but this leaves a gap at the end when doing pure line-to;
+		if (!!this.useLineTo) availableSpaces++;
 		for (var i = 0; i < availableSpaces; i++) {			
 			var yCenterOffset = this.yCenterOffset;
 			var yCenterOffsetMod = this.yCenterOffsetMod;
@@ -215,7 +222,7 @@ function Board(canvas) {
 				this.context.beginPath();
 				this.context.moveTo(0, 0);
 				for (var i = 0; i < entity.top.length; i++) {
-					entity.top[i][0] -= (!!this.animated) ? 1 : 0;
+					entity.top[i][0] -= (!!this.animated) ? 30 : 0;
 					if (!!this.travelWithPath) {
 						entity.top[i][1] += this.topAdjust
 					}
@@ -230,7 +237,7 @@ function Board(canvas) {
 				this.context.beginPath();
 				this.context.moveTo(entity.bottom[0][0], entity.bottom[0][1]);
 				for (var i = 0; i < entity.bottom.length; i++) {
-					entity.bottom[i][0] -= (!!this.animated) ? 1 : 0;
+					entity.bottom[i][0] -= (!!this.animated) ? 30 : 0;
 					if (!!this.travelWithPath) {
 						entity.bottom[i][1] += this.topAdjust
 					}
@@ -241,6 +248,8 @@ function Board(canvas) {
 				this.context.closePath();
 				this.context.fill();
 				this.context.stroke();
+			break;
+			case 'point':
 			break;
 		}
 	}
@@ -271,7 +280,7 @@ function Board(canvas) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = false;
+	this.useLineTo = true;
 	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
@@ -361,6 +370,9 @@ function Game(canvas) {
 						// obstacles
 					if (!this.board.useLineTo) {
 						this.board.obstacles.splice(0,2);
+					} else {
+						this.board.obstacles.top.splice(0,2);
+						this.board.obstacles.bottom.splice(0,2);
 					}
 					this.board.createObstacles();
 					
