@@ -46,7 +46,7 @@ function Board(canvas) {
 
 				if (!!pinnedToBottom) pathCenter = maxPathCenter;
 				
-				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i/2 : -i/2;
+				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i/4 : -i/4;
 					
 				// ensure it doesn't get too difficult
 				yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
@@ -172,7 +172,7 @@ function Board(canvas) {
 
 				if (!!pinnedToBottom) pathCenter = maxPathCenter;
 				
-				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
+				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i/4 : -i/4;
 					
 				// ensure it doesn't get too difficult
 				yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
