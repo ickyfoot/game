@@ -31,7 +31,7 @@ function Board(canvas) {
 			// this is necessary because availableSpaces is calculated to determine how
 			// many rectangles of a given width can fit in the full board width
 			// but this leaves a gap at the end when doing pure line-to;
-			availableSpaces += 4;
+			availableSpaces += 5; // 5 prevents flatlining at work, 4 works at home. Does 5 work at  home?
 			for (var i = 0; i < availableSpaces; i++) {
 				var yCenterOffset = this.yCenterOffset;
 				var yCenterOffsetMod = this.yCenterOffsetMod;
@@ -46,15 +46,15 @@ function Board(canvas) {
 
 				if (!!pinnedToBottom) pathCenter = maxPathCenter;
 				
-				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i/4 : -i/4;
+				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
 					
 				// ensure it doesn't get too difficult
-				yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
-					? yCenterOffsetMod - this.minObstacleHeight 
-					: yCenterOffsetMod;
-				yCenterOffsetMod = (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
-					? yCenterOffsetMod + this.minObstacleHeight 
-					: yCenterOffsetMod;
+				yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
+					? this.minObstacleHeight 
+					: 0;
+				yCenterOffsetMod += (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
+					? this.minObstacleHeight 
+					: 0;
 				
 				// randomize y offset direction
 				if (!pinned) yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
@@ -113,9 +113,9 @@ function Board(canvas) {
 					// unpin path from top or bottom if necessary
 					if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
 						// home
-						yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						// yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						// work
-						// yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
 							? this.maxPinnedCount 
 							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
@@ -132,7 +132,7 @@ function Board(canvas) {
 					this.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
 					this.yCenterOffsetMod = yCenterOffsetMod;
 				}
-					
+				
 				this.obstacles.top.push([currentX,topHeight]);
 				this.obstacles.bottom.push([currentX,bottomY]);
 				
@@ -172,15 +172,15 @@ function Board(canvas) {
 
 				if (!!pinnedToBottom) pathCenter = maxPathCenter;
 				
-				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i/4 : -i/4;
+				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
 					
 				// ensure it doesn't get too difficult
-				yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
-					? yCenterOffsetMod - this.minObstacleHeight 
-					: yCenterOffsetMod;
-				yCenterOffsetMod = (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
-					? yCenterOffsetMod + this.minObstacleHeight 
-					: yCenterOffsetMod;
+				yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
+					? this.minObstacleHeight 
+					: 0;
+				yCenterOffsetMod += (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
+					? this.minObstacleHeight 
+					: 0;
 				
 				// randomize y offset direction
 				if (!pinned) yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
@@ -239,9 +239,9 @@ function Board(canvas) {
 					// unpin path from top or bottom if necessary
 					if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
 						// home
-						yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						// yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						// work
-						// yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
 							? this.maxPinnedCount 
 							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
@@ -440,10 +440,12 @@ function Flow() {
 	}
 }
 
-function Game(canvas) {
+function Game(canvas, d_canvas) {
 	this.animation = new Animation();
 	this.board = new Board(canvas);
+	this.boardIndex = 1;
 	this.controls = new Controls();	
+	this.d_board = new Board(d_canvas);
 	this.inputs = {
 		word: ''
 	}
@@ -453,21 +455,23 @@ function Game(canvas) {
 	this.init = () => {
 		// set up entities
 			// player
-		this.board.player = new Player(15, this.board.dimensions.height/2, 5);
+		this.d_board.player = new Player(15, this.d_board.dimensions.height/2, 5);
 		
 			// obstacles
-		this.board.createObstacles();
+		this.d_board.createObstacles();
 
 		// draw entities
 		// player
-		this.board.draw(this.board.player);
+		this.d_board.draw(this.d_board.player);
 		
 		// obstacles
-		if (!!this.board.useLineTo) {
-			this.board.draw(this.board.obstacles, 'lineTo');
+		if (!!this.d_board.useLineTo) {
+			this.d_board.draw(this.d_board.obstacles, 'lineTo');
 		} else {
-			for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+			for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
 		}
+		
+		this.board.context.drawImage(this.d_board.canvas, 0, 0);
 		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
@@ -481,33 +485,33 @@ function Game(canvas) {
 				// call for controlling the player
 				case 'move player':
 					var obstacleDims = [];
-					for (var i = 0; i < this.board.obstacles.length; i++) obstacleDims.push(this.board.obstacles[i].dim);
+					for (var i = 0; i < this.d_board.obstacles.length; i++) obstacleDims.push(this.d_board.obstacles[i].dim);
 					
 					// clear board to prepare for next animation state
-					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
+					this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
 					
 					// update and draw entities			
 					if (appData.collision != null) {
 						this.stop('over');
-						this.board.player.collided = true;
+						this.d_board.player.collided = true;
 						appData.collision.collided = true;
-						this.board.draw(this.board.player);
-						for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
-						this.board.draw(appData.collision);
+						this.d_board.draw(this.d_board.player);
+						for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
+						this.d_board.draw(appData.collision);
 					} else {
-						if (!!this.board.useLineTo) {
-							this.board.draw(this.board.obstacles, 'lineTo');
-							this.board.draw(this.board.player);
-							this.board.obstacles.top.splice(0,1);
-							this.board.obstacles.bottom.splice(0,1);
-							this.board.createObstacles();
-							this.board.player.update(appData.x, appData.y, appData.radius);
+						if (!!this.d_board.useLineTo) {
+							this.d_board.draw(this.d_board.obstacles, 'lineTo');
+							this.d_board.draw(this.d_board.player);
+							this.d_board.obstacles.top.splice(0,1);
+							this.d_board.obstacles.bottom.splice(0,1);
+							this.d_board.createObstacles();
+							this.d_board.player.update(appData.x, appData.y, appData.radius);
 						} else {
-							for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
-							this.board.draw(this.board.player);
-							this.board.obstacles.splice(0,2);
-							this.board.createObstacles();
-							this.board.player.update(appData.x, appData.y, appData.radius);
+							for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
+							this.d_board.draw(this.d_board.player);
+							this.d_board.obstacles.splice(0,2);
+							this.d_board.createObstacles();
+							this.d_board.player.update(appData.x, appData.y, appData.radius);
 						}
 					}
 										
@@ -525,38 +529,48 @@ function Game(canvas) {
 		if (this.status == 'playing' && this.animation.lastFrame !== null) {
 			// send info to Web Worker to determine if it's time to redraw
 			// redrawing is handled in this.worker callback defined in this.init
-			var obstacleDims = [];
-			this.board.animated = true;
-			
-			if (!!this.board.useLineTo) {
-				var filteredTopObstacles = this.board.obstacles.top.filter((el) => {
-					return (el.x > (this.board.player.dim.x - 5) && el.x < (this.board.player.dim.x + 5));
-				});
-				var filteredBottomObstacles = this.board.obstacles.top.filter((el) => {
-					return (el.x > (this.board.player.dim.x - 5) && el.x < (this.board.player.dim.x + 5));
-				});
-				var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-			} else {
-				var filteredObstacles = this.board.obstacles.filter((el) => {
-					return el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5);
-				});
-			}
-
-			this.physics.worker.postMessage({
-				action: 'move player',
-				appData: {
-					now: performance.now(),
-					lastFrame: this.animation.lastFrame,
-					fpsAsMilliseconds: this.animation.fpsAsMilliseconds,
-					player: this.board.player.dim,
-					board: {
-						width: this.board.dimensions.width,
-						height: this.board.dimensions.height
-					},
-					obstacles: filteredObstacles,
-					controls: this.controls
+			if (this.boardIndex < 0) {
+				console.log('toast');
+				var obstacleDims = [];
+				this.d_board.animated = true;
+				
+				if (!!this.d_board.useLineTo) {
+					var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
+						return (el.x > (this.d_board.player.dim.x - 5) && el.x < (this.d_board.player.dim.x + 5));
+					});
+					var filteredBottomObstacles = this.d_board.obstacles.top.filter((el) => {
+						return (el.x > (this.d_board.player.dim.x - 5) && el.x < (this.d_board.player.dim.x + 5));
+					});
+					var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+				} else {
+					var filteredObstacles = this.d_board.obstacles.filter((el) => {
+						return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
+					});
 				}
-			});
+
+				this.physics.worker.postMessage({
+					action: 'move player',
+					appData: {
+						now: performance.now(),
+						lastFrame: this.animation.lastFrame,
+						fpsAsMilliseconds: this.animation.fpsAsMilliseconds,
+						player: this.d_board.player.dim,
+						board: {
+							width: this.d_board.dimensions.width,
+							height: this.d_board.dimensions.height
+						},
+						obstacles: filteredObstacles,
+						controls: this.controls
+					}
+				});
+				this.boardIndex = 1;
+			} else {
+				console.log('test');
+				// clear board to prepare for next animation state
+				this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
+				this.board.context.drawImage(this.d_board.canvas, 0, 0);
+				this.boardIndex = -1;
+			}
 		}
 	}
 	
@@ -671,11 +685,15 @@ function Player(x, y, r) {
 
 $(document).on('ready',function() {
 	var canvas = document.getElementById('game-board');
+	var d_canvas = document.getElementById('drawing-board');
 	$(canvas).attr('width', $('#container').width());
 	$(canvas).attr('height', $('#container').height());
 	
+	$(d_canvas).attr('width', $('#container').width());
+	$(d_canvas).attr('height', $('#container').height());
+	
 	// set up board
-	var game = new Game(canvas);
+	var game = new Game(canvas, d_canvas);
 	game.init();	
 		
 	ickyfoot.setUpKeyDetection(function(key,type) {

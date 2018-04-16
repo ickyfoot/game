@@ -26,13 +26,21 @@ html, body {
 	border: var(--game-board-border) solid var(--opaque-white);
 }
 
-#game-board {
-	width: 100%;
-    height: 100%;
+#game-board,
+#drawing-board {
+	width: calc(100% - calc(2 * var(--game-board-border)));
+    height: calc(100% - calc(2 * var(--game-board-border)));
 	display:block;
     padding: 0;
 	overflow: hidden;
+	margin: var(--game-board-border) solid var(--opaque-white);
+	position:absolute;
 }
+
+#drawing-board {
+	visibility: hidden;
+}
+
 #game-piece {
 	height: calc(.7 * var(--one-em));
 	width: calc(.7 * var(--one-em));
