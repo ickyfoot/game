@@ -17,18 +17,17 @@ function Board(canvas) {
 	this.context = canvas.getContext('2d');
 	this.createObstacles = () => {
 		if (!!this.useLineTo) {
-			var obstacleWidth = this.dimensions.width / this.maxObstacles;
-			// divide obstacles array length by 2 because obstacles come in pairs
+			this.obstacleWidth = this.dimensions.width / this.maxObstacles;
 			var obstaclesLength = this.obstacles.top.length;
-			var availableSpace = this.dimensions.width - (obstaclesLength * obstacleWidth);
-			var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
+			var availableSpace = this.dimensions.width - (obstaclesLength * this.obstacleWidth);
+			var availableSpaces = Math.ceil(availableSpace / this.obstacleWidth);
 
 			var pathPadding = this.obstaclePathMinHeight / 2;
 			// divide obstacles array length by 2 because obstacles come in pairs
-			var currentX = obstaclesLength * obstacleWidth;
+			var currentX = obstaclesLength * this.obstacleWidth;
 			var minPathCenter = this.minObstacleHeight + pathPadding;
 			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
-			// add one more space if this is a strictly lineTo draw
+			// add availableSpaces if this is a strictly lineTo draw
 			// this is necessary because availableSpaces is calculated to determine how
 			// many rectangles of a given width can fit in the full board width
 			// but this leaves a gap at the end when doing pure line-to;
@@ -47,7 +46,7 @@ function Board(canvas) {
 
 				if (!!pinnedToBottom) pathCenter = maxPathCenter;
 				
-				yCenterOffsetMod += (yCenterOffsetMod < 0) ? 30 : -30;
+				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i/2 : -i/2;
 					
 				// ensure it doesn't get too difficult
 				yCenterOffsetMod = (yCenterOffsetMod > this.maxYCenterOffsetMod) 
@@ -144,18 +143,18 @@ function Board(canvas) {
 				//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 				
 				// update the x coordinates for the next pair of obstacles
-				currentX += obstacleWidth;
+				currentX += this.obstacleWidth;
 			}
 		} else {
-			var obstacleWidth = this.dimensions.width / this.maxObstacles;
+			this.obstacleWidth = this.dimensions.width / this.maxObstacles;
 			// divide obstacles array length by 2 because obstacles come in pairs
 			var obstaclesLength = this.obstacles.length / 2;
-			var availableSpace = this.dimensions.width - (obstaclesLength * obstacleWidth);
-			var availableSpaces = Math.ceil(availableSpace / obstacleWidth);
+			var availableSpace = this.dimensions.width - (obstaclesLength * this.obstacleWidth);
+			var availableSpaces = Math.ceil(availableSpace / this.obstacleWidth);
 
 			var pathPadding = this.obstaclePathMinHeight / 2;
 			// divide obstacles array length by 2 because obstacles come in pairs
-			var currentX = obstaclesLength * obstacleWidth;
+			var currentX = obstaclesLength * this.obstacleWidth;
 			var minPathCenter = this.minObstacleHeight + pathPadding;
 			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
 			
@@ -264,7 +263,7 @@ function Board(canvas) {
 				this.obstacles.push(new Obstacle(
 					currentX, // x
 					topY, // y
-					obstacleWidth, // width
+					this.obstacleWidth, // width
 					topHeight, // height
 					this.rgba.red,
 					this.rgba.green,
@@ -276,7 +275,7 @@ function Board(canvas) {
 				this.obstacles.push(new Obstacle(
 					currentX, // x
 					bottomY, // y
-					obstacleWidth, // w
+					this.obstacleWidth, // w
 					bottomHeight, // h
 					this.rgba.red,
 					this.rgba.green,
@@ -291,7 +290,7 @@ function Board(canvas) {
 				} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red); */
 				
 				// update the x coordinates for the next pair of obstacles
-				currentX += obstacleWidth;
+				currentX += this.obstacleWidth;
 			}
 		}
 	}
@@ -311,7 +310,7 @@ function Board(canvas) {
 				this.context.stroke();
 			break;
 			case 'path':
-				entity.dim.x = (!!this.animated) ? entity.dim.x - entity.dim.w : entity.dim.x;
+				entity.dim.x -= (!!this.animated) ? entity.dim.w : 0;
 				if (!!this.travelWithPath) {
 					entity.dim.y += this.topAdjust
 					entity.dim.h -= this.topAdjust;
@@ -345,7 +344,7 @@ function Board(canvas) {
 				this.context.beginPath();
 				this.context.moveTo(0, 0);
 				for (var i = 0; i < entity.top.length; i++) {
-					entity.top[i][0] -= (!!this.animated) ? 30 : 0;
+					entity.top[i][0] -= (!!this.animated) ? this.obstacleWidth : 0;
 					if (!!this.travelWithPath) {
 						entity.top[i][1] += this.topAdjust
 					}
@@ -360,7 +359,7 @@ function Board(canvas) {
 				this.context.beginPath();
 				this.context.moveTo(entity.bottom[0][0], entity.bottom[0][1]);
 				for (var i = 0; i < entity.bottom.length; i++) {
-					entity.bottom[i][0] -= (!!this.animated) ? 30 : 0;
+					entity.bottom[i][0] -= (!!this.animated) ? this.obstacleWidth : 0;
 					if (!!this.travelWithPath) {
 						entity.bottom[i][1] += this.topAdjust
 					}
@@ -377,6 +376,7 @@ function Board(canvas) {
 		}
 	}
 	this.maxObstacles = 150;
+	this.obstacleWidth = this.dimensions.width / this.maxObstacles;
 	this.maxPinnedCount = 15;
 	this.currentMaxPinnedCount = this.maxPinnedCount;
 	this.minPinnedCount = 3;
@@ -486,37 +486,32 @@ function Game(canvas) {
 					// clear board to prepare for next animation state
 					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 					
-					// update entities
-						// player
-					
-					// draw entities
-						// player
-					
-					// update and draw entities
-					if (!!this.board.useLineTo) {
-						this.board.draw(this.board.obstacles, 'lineTo');
-						this.board.draw(this.board.player);
-						this.board.obstacles.top.splice(0,2);
-						this.board.obstacles.bottom.splice(0,2);
-						this.board.createObstacles();
-						this.board.player.update(appData.x, appData.y, appData.radius);
-					} else {
-						for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
-						this.board.draw(this.board.player);
-						this.board.obstacles.splice(0,2);
-						this.board.createObstacles();
-						this.board.player.update(appData.x, appData.y, appData.radius);
-					}
-					
-					var frameLength = performance.now() - this.animation.lastFrame;
-			
+					// update and draw entities			
 					if (appData.collision != null) {
 						this.stop('over');
 						this.board.player.collided = true;
 						appData.collision.collided = true;
 						this.board.draw(this.board.player);
+						for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
 						this.board.draw(appData.collision);
+					} else {
+						if (!!this.board.useLineTo) {
+							this.board.draw(this.board.obstacles, 'lineTo');
+							this.board.draw(this.board.player);
+							this.board.obstacles.top.splice(0,1);
+							this.board.obstacles.bottom.splice(0,1);
+							this.board.createObstacles();
+							this.board.player.update(appData.x, appData.y, appData.radius);
+						} else {
+							for (var i = 0; i < this.board.obstacles.length; i++) this.board.draw(this.board.obstacles[i]);
+							this.board.draw(this.board.player);
+							this.board.obstacles.splice(0,2);
+							this.board.createObstacles();
+							this.board.player.update(appData.x, appData.y, appData.radius);
+						}
 					}
+										
+					var frameLength = performance.now() - this.animation.lastFrame;
 				break;
 			}
 		}
