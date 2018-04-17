@@ -96,9 +96,9 @@ onmessage = function(e) {
 	action = metaData.action;
 	switch (action) {
 		case 'move player':
-			var frameLength, dim, collision;
+			var dim, collision;
 			dim = physics.getNewDimensions(appData);
-			collision = physics.detectCollision(dim,appData.obstacles);
+			collision = (appData.obstacles !== null) ? physics.detectCollision(dim,appData.obstacles) : null;
 			postMessage({
 				action: 'move player',
 				appData: {

@@ -1,14 +1,14 @@
 function Animation() {
-	this.fps = 60,
-	this.fpsAsMilliseconds = 1000/this.fps,
-	this.frameCount = null,
-	this.frameLength = null,
-	this.lastFrame = null,
-	this.main = null,
-	this.nextFrame = null,
+	this.fps = 120;
+	this.fpsAsMilliseconds = 1000/this.fps;
+	this.frameCount = null;
+	this.frameLength = null;
+	this.lastFrame = null;
+	this.main = null;
+	this.nextFrame = null;
 	// how many loops to perform per millisecond in each frame
 	// the higher the number, the faster the player moves
-	this.playerLoopsPerFrameMillisecond = 1
+	this.playerLoopsPerFrameMillisecond = 1;
 }
 
 function Board(canvas) {
@@ -405,7 +405,7 @@ function Board(canvas) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = false;
+	this.useLineTo = true;
 	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
@@ -501,15 +501,13 @@ function Game(canvas, d_canvas) {
 							this.d_board.draw(this.d_board.player);
 							this.d_board.obstacles.top.splice(0,1);
 							this.d_board.obstacles.bottom.splice(0,1);
-							this.d_board.createObstacles();
-							this.d_board.player.update(appData.x, appData.y, appData.radius);
 						} else {
 							for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
 							this.d_board.draw(this.d_board.player);
 							this.d_board.obstacles.splice(0,2);
-							this.d_board.createObstacles();
-							this.d_board.player.update(appData.x, appData.y, appData.radius);
 						}
+						this.d_board.createObstacles();
+						this.d_board.player.update(appData.x, appData.y, appData.radius);
 					}
 					this.boardIndex = 1;
 				break;
@@ -544,28 +542,28 @@ function Game(canvas, d_canvas) {
 							//this.stop('over');
 						}
 					}
+					filteredObstacles = null;
 				} else {
-					this.filteredObstacles = this.d_board.obstacles.filter((el) => {
+					var filteredObstacles = this.d_board.obstacles.filter((el) => {
 						return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
 					});
 				}
-				
+
 				let frameLength = performance.now() - this.animation.lastFrame;
-				this.physics.worker.postMessage({
-					action: 'move player',
-					appData: {
-						now: performance.now(),
-						lastFrame: this.animation.lastFrame,
-						fpsAsMilliseconds: this.animation.fpsAsMilliseconds,
-						player: this.d_board.player.dim,
-						board: {
-							width: this.d_board.dimensions.width,
-							height: this.d_board.dimensions.height
-						},
-						obstacles: this.filteredObstacles,
-						controls: this.controls
-					}
-				});
+				if (frameLength > this.animation.fpsAsMilliseconds) {
+					this.physics.worker.postMessage({
+						action: 'move player',
+						appData: {
+							player: this.d_board.player.dim,
+							board: {
+								width: this.d_board.dimensions.width,
+								height: this.d_board.dimensions.height
+							},
+							obstacles: filteredObstacles,
+							controls: this.controls
+						}
+					});
+				}
 			} else {
 				this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 				this.board.context.drawImage(this.d_board.canvas, 0, 0);
