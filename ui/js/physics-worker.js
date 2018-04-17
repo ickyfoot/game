@@ -5,6 +5,7 @@ function Physics() {
 		var playerLeft = player.x - player.radius;
 		var playerRight = player.x + player.radius;
 		for (var i = 0; i < items.length; i++) {
+			if (!!Array.isArray(items)) return null;
 			if (
 					(
 						(playerBottom >= items[i].dim.y && playerBottom <= items[i].dim.bottom)
@@ -96,23 +97,18 @@ onmessage = function(e) {
 	action = metaData.action;
 	switch (action) {
 		case 'move player':
-			var lastFrame, frameLength, dim, collision;
-			frameLength = appData.now - appData.lastFrame;
-			if (frameLength > appData.fpsAsMilliseconds) {
-				dim = physics.getNewDimensions(appData);
-				collision = physics.detectCollision(dim,appData.obstacles)
-				lastFrame = appData.now - (frameLength % appData.fpsAsMilliseconds);
-				postMessage({
-					action: 'move player',
-					appData: {
-						collision: collision,
-						lastFrame: lastFrame,
-						radius: dim.radius,
-						x: dim.x,
-						y: dim.y
-					}
-				});
-			}
+			var frameLength, dim, collision;
+			dim = physics.getNewDimensions(appData);
+			collision = physics.detectCollision(dim,appData.obstacles);
+			postMessage({
+				action: 'move player',
+				appData: {
+					collision: collision,
+					radius: dim.radius,
+					x: dim.x,
+					y: dim.y
+				}
+			});
 		break;
 	}
 }

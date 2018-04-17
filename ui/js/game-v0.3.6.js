@@ -1,5 +1,5 @@
 function Animation() {
-	this.fps = 30,
+	this.fps = 60,
 	this.fpsAsMilliseconds = 1000/this.fps,
 	this.frameCount = null,
 	this.frameLength = null,
@@ -479,14 +479,10 @@ function Game(canvas, d_canvas) {
 			data = e.data;
 			action = data.action;
 			appData = data.appData;
-			this.animation.lastFrame = appData.lastFrame;
-			
+			this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
 			switch (data.action) {
 				// call for controlling the player
 				case 'move player':
-					var obstacleDims = [];
-					for (var i = 0; i < this.d_board.obstacles.length; i++) obstacleDims.push(this.d_board.obstacles[i].dim);
-					
 					// clear board to prepare for next animation state
 					this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
 					
@@ -514,8 +510,6 @@ function Game(canvas, d_canvas) {
 							this.d_board.player.update(appData.x, appData.y, appData.radius);
 						}
 					}
-										
-					var frameLength = performance.now() - this.animation.lastFrame;
 				break;
 			}
 		}
@@ -526,28 +520,35 @@ function Game(canvas, d_canvas) {
 		// see here for consistent frame rate logic:
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
 		this.animation.main = window.requestAnimationFrame(this.run);
+
+		this.benchmark++
+
 		if (this.status == 'playing' && this.animation.lastFrame !== null) {
 			// send info to Web Worker to determine if it's time to redraw
 			// redrawing is handled in this.worker callback defined in this.init
 			if (this.boardIndex < 0) {
-				console.log('toast');
-				var obstacleDims = [];
 				this.d_board.animated = true;
-				
 				if (!!this.d_board.useLineTo) {
 					var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
-						return (el.x > (this.d_board.player.dim.x - 5) && el.x < (this.d_board.player.dim.x + 5));
+						return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
 					});
-					var filteredBottomObstacles = this.d_board.obstacles.top.filter((el) => {
-						return (el.x > (this.d_board.player.dim.x - 5) && el.x < (this.d_board.player.dim.x + 5));
+					var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
+						return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
 					});
 					var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+					for (var i = 0; i < filteredObstacles.length; i++) {
+						if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
+							//console.log('stop');
+							//this.stop('over');
+						}
+					}
 				} else {
 					var filteredObstacles = this.d_board.obstacles.filter((el) => {
 						return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
 					});
 				}
-
+				
+				let frameLength = performance.now() - this.animation.lastFrame;
 				this.physics.worker.postMessage({
 					action: 'move player',
 					appData: {
@@ -565,11 +566,9 @@ function Game(canvas, d_canvas) {
 				});
 				this.boardIndex = 1;
 			} else {
-				console.log('test');
-				// clear board to prepare for next animation state
-				this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
-				this.board.context.drawImage(this.d_board.canvas, 0, 0);
-				this.boardIndex = -1;
+					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
+					this.board.context.drawImage(this.d_board.canvas, 0, 0);
+					this.boardIndex = -1;
 			}
 		}
 	}
