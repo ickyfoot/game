@@ -5,7 +5,6 @@ function Physics() {
 		var playerLeft = player.x - player.radius;
 		var playerRight = player.x + player.radius;
 		for (var i = 0; i < items.length; i++) {
-			if (!!Array.isArray(items)) return null;
 			if (
 					(
 						(playerBottom >= items[i].dim.y && playerBottom <= items[i].dim.bottom)
@@ -18,7 +17,7 @@ function Physics() {
 							||
 						(playerLeft >= items[i].dim.x && playerLeft <= items[i].dim.right)
 					)
-				) return items[i];
+				) return i;
 		}
 		return null;
 	}

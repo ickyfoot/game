@@ -302,6 +302,7 @@ function Board(canvas) {
 				this.context.beginPath();
 				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
 				if (!!entity.collided) {
+					console.log('player collided');
 					this.context.strokeStyle = 'rgba(200,20,20,1.0)';
 				} else {
 					this.context.strokeStyle = 'rgba(20,20,20,1.0)';
@@ -322,6 +323,7 @@ function Board(canvas) {
 				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
 				this.context.closePath();
 				if (!!entity.collided) {
+					console.log('obstacle collided');
 					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 				} else {
@@ -403,7 +405,7 @@ function Board(canvas) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = true;
+	this.useLineTo = false;
 	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
@@ -488,12 +490,11 @@ function Game(canvas, d_canvas) {
 					
 					// update and draw entities			
 					if (appData.collision != null) {
-						this.stop('over');
 						this.d_board.player.collided = true;
-						appData.collision.collided = true;
+						this.filteredObstacles[appData.collision].collided = true;
 						this.d_board.draw(this.d_board.player);
 						for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
-						this.d_board.draw(appData.collision);
+						this.status = 'collision';
 					} else {
 						if (!!this.d_board.useLineTo) {
 							this.d_board.draw(this.d_board.obstacles, 'lineTo');
@@ -510,11 +511,12 @@ function Game(canvas, d_canvas) {
 							this.d_board.player.update(appData.x, appData.y, appData.radius);
 						}
 					}
+					this.boardIndex = 1;
 				break;
 			}
 		}
 	}
-	
+	this.filteredObstacles;
 	// main loop
 	this.run = () => {
 		// see here for consistent frame rate logic:
@@ -543,7 +545,7 @@ function Game(canvas, d_canvas) {
 						}
 					}
 				} else {
-					var filteredObstacles = this.d_board.obstacles.filter((el) => {
+					this.filteredObstacles = this.d_board.obstacles.filter((el) => {
 						return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
 					});
 				}
@@ -560,15 +562,15 @@ function Game(canvas, d_canvas) {
 							width: this.d_board.dimensions.width,
 							height: this.d_board.dimensions.height
 						},
-						obstacles: filteredObstacles,
+						obstacles: this.filteredObstacles,
 						controls: this.controls
 					}
 				});
-				this.boardIndex = 1;
 			} else {
-					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
-					this.board.context.drawImage(this.d_board.canvas, 0, 0);
-					this.boardIndex = -1;
+				this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
+				this.board.context.drawImage(this.d_board.canvas, 0, 0);
+				this.boardIndex = -1;
+				if (this.status == 'collision') this.stop('over');
 			}
 		}
 	}
