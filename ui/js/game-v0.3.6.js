@@ -11,8 +11,9 @@ function Animation() {
 	this.playerLoopsPerFrameMillisecond = 1;
 }
 
-function Board(canvas) {
+function Board(canvas, animation) {
 	this.animated = false;
+	this.animation = animation;
 	this.canvas = canvas;
 	this.context = canvas.getContext('2d');
 	this.createObstacles = () => {
@@ -24,7 +25,7 @@ function Board(canvas) {
 
 			var pathPadding = this.obstaclePathMinHeight / 2;
 			// divide obstacles array length by 2 because obstacles come in pairs
-			var currentX = obstaclesLength * this.obstacleWidth;
+			var currentX = (obstaclesLength * this.obstacleWidth) + this.animation.frameLength;
 			var minPathCenter = this.minObstacleHeight + pathPadding;
 			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
 			// add availableSpaces if this is a strictly lineTo draw
@@ -143,7 +144,7 @@ function Board(canvas) {
 				//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 				
 				// update the x coordinates for the next pair of obstacles
-				currentX += this.obstacleWidth;
+				currentX += this.obstacleWidth + this.animation.frameLength;
 			}
 		} else {
 			this.obstacleWidth = this.dimensions.width / this.maxObstacles;
@@ -345,6 +346,7 @@ function Board(canvas) {
 				// draw top
 				this.context.beginPath();
 				this.context.moveTo(0, 0);
+				this.context.lineTo(0, entity.top[0][1]);
 				for (var i = 0; i < entity.top.length; i++) {
 					entity.top[i][0] -= (!!this.animated) ? this.obstacleWidth : 0;
 					if (!!this.travelWithPath) {
@@ -352,6 +354,7 @@ function Board(canvas) {
 					}
 					this.context.lineTo(entity.top[i][0], entity.top[i][1]);
 				}
+				this.context.lineTo(this.dimensions.width, entity.top[entity.top.length - 1][1]);
 				this.context.lineTo(this.dimensions.width, 0);
 				this.context.closePath();
 				this.context.fill();
@@ -359,7 +362,7 @@ function Board(canvas) {
 				
 				// draw bottom
 				this.context.beginPath();
-				this.context.moveTo(entity.bottom[0][0], entity.bottom[0][1]);
+				this.context.moveTo(0, entity.bottom[0][1]);
 				for (var i = 0; i < entity.bottom.length; i++) {
 					entity.bottom[i][0] -= (!!this.animated) ? this.obstacleWidth : 0;
 					if (!!this.travelWithPath) {
@@ -367,6 +370,7 @@ function Board(canvas) {
 					}
 					this.context.lineTo(entity.bottom[i][0], entity.bottom[i][1]);
 				}
+				this.context.lineTo(this.dimensions.width, entity.bottom[entity.bottom.length - 1][1]);
 				this.context.lineTo(this.dimensions.width, this.dimensions.height);
 				this.context.lineTo(0, this.dimensions.height);
 				this.context.closePath();
@@ -405,7 +409,7 @@ function Board(canvas) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = false;
+	this.useLineTo = true;
 	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
@@ -444,10 +448,13 @@ function Flow() {
 
 function Game(canvas, d_canvas) {
 	this.animation = new Animation();
-	this.board = new Board(canvas);
+	// display board
+	this.board = new Board(canvas, this.animation);
+	// drawing board
+	this.d_board = new Board(d_canvas, this.animation);
+	
 	this.boardIndex = 1;
 	this.controls = new Controls();	
-	this.d_board = new Board(d_canvas);
 	this.inputs = {
 		word: ''
 	}
@@ -481,35 +488,23 @@ function Game(canvas, d_canvas) {
 			data = e.data;
 			action = data.action;
 			appData = data.appData;
-			this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
 			switch (data.action) {
 				// call for controlling the player
 				case 'move player':
-					// clear board to prepare for next animation state
-					this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
-					
-					// update and draw entities			
 					if (appData.collision != null) {
 						this.d_board.player.collided = true;
 						this.filteredObstacles[appData.collision].collided = true;
-						this.d_board.draw(this.d_board.player);
-						for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
 						this.status = 'collision';
 					} else {
 						if (!!this.d_board.useLineTo) {
-							this.d_board.draw(this.d_board.obstacles, 'lineTo');
-							this.d_board.draw(this.d_board.player);
 							this.d_board.obstacles.top.splice(0,1);
 							this.d_board.obstacles.bottom.splice(0,1);
 						} else {
-							for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
-							this.d_board.draw(this.d_board.player);
 							this.d_board.obstacles.splice(0,2);
 						}
 						this.d_board.createObstacles();
 						this.d_board.player.update(appData.x, appData.y, appData.radius);
 					}
-					this.boardIndex = 1;
 				break;
 			}
 		}
@@ -521,55 +516,64 @@ function Game(canvas, d_canvas) {
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
 		this.animation.main = window.requestAnimationFrame(this.run);
 
-		this.benchmark++
-
 		if (this.status == 'playing' && this.animation.lastFrame !== null) {
+			this.d_board.animated = true;
+			if (!!this.d_board.useLineTo) {
+				var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
+					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+				});
+				var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
+					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+				});
+				var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+				for (var i = 0; i < filteredObstacles.length; i++) {
+					if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
+						//console.log('stop');
+						//this.stop('over');
+					}
+				}
+				
+				// turn off collision detection
+				filteredObstacles = null;
+			} else {
+				var filteredObstacles = this.d_board.obstacles.filter((el) => {
+					return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
+				});
+			}
+			
 			// send info to Web Worker to determine if it's time to redraw
 			// redrawing is handled in this.worker callback defined in this.init
+			this.physics.worker.postMessage({
+				action: 'move player',
+				appData: {
+					player: this.d_board.player.dim,
+					board: {
+						width: this.d_board.dimensions.width,
+						height: this.d_board.dimensions.height
+					},
+					obstacles: filteredObstacles,
+					controls: this.controls
+				}
+			});
+			
 			if (this.boardIndex < 0) {
-				this.d_board.animated = true;
+				// clear board to prepare for next animation state
+				this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
+				this.d_board.draw(this.d_board.player);				
 				if (!!this.d_board.useLineTo) {
-					var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
-						return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
-					});
-					var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
-						return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
-					});
-					var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-					for (var i = 0; i < filteredObstacles.length; i++) {
-						if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
-							//console.log('stop');
-							//this.stop('over');
-						}
-					}
-					filteredObstacles = null;
+					this.d_board.draw(this.d_board.obstacles, 'lineTo');
 				} else {
-					var filteredObstacles = this.d_board.obstacles.filter((el) => {
-						return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
-					});
+					for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
 				}
-
-				let frameLength = performance.now() - this.animation.lastFrame;
-				if (frameLength > this.animation.fpsAsMilliseconds) {
-					this.physics.worker.postMessage({
-						action: 'move player',
-						appData: {
-							player: this.d_board.player.dim,
-							board: {
-								width: this.d_board.dimensions.width,
-								height: this.d_board.dimensions.height
-							},
-							obstacles: filteredObstacles,
-							controls: this.controls
-						}
-					});
-				}
+				this.boardIndex = 1;
 			} else {
 				this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 				this.board.context.drawImage(this.d_board.canvas, 0, 0);
 				this.boardIndex = -1;
 				if (this.status == 'collision') this.stop('over');
 			}
+			this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
+			this.animation.frameLength = performance.now() - this.animation.lastFrame;
 		}
 	}
 	
