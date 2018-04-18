@@ -1,5 +1,5 @@
 function Animation() {
-	this.fps = 120;
+	this.fps = 30;
 	this.fpsAsMilliseconds = 1000/this.fps;
 	this.frameCount = null;
 	this.frameLength = null;
@@ -25,7 +25,7 @@ function Board(canvas, animation) {
 
 			var pathPadding = this.obstaclePathMinHeight / 2;
 			// divide obstacles array length by 2 because obstacles come in pairs
-			var currentX = (obstaclesLength * this.obstacleWidth) + this.animation.frameLength;
+			var currentX = (obstaclesLength * this.obstacleWidth);
 			var minPathCenter = this.minObstacleHeight + pathPadding;
 			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
 			// add availableSpaces if this is a strictly lineTo draw
@@ -144,7 +144,7 @@ function Board(canvas, animation) {
 				//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 				
 				// update the x coordinates for the next pair of obstacles
-				currentX += this.obstacleWidth + this.animation.frameLength;
+				currentX += this.obstacleWidth;
 			}
 		} else {
 			this.obstacleWidth = this.dimensions.width / this.maxObstacles;
@@ -496,12 +496,6 @@ function Game(canvas, d_canvas) {
 						this.filteredObstacles[appData.collision].collided = true;
 						this.status = 'collision';
 					} else {
-						if (!!this.d_board.useLineTo) {
-							this.d_board.obstacles.top.splice(0,1);
-							this.d_board.obstacles.bottom.splice(0,1);
-						} else {
-							this.d_board.obstacles.splice(0,2);
-						}
 						this.d_board.createObstacles();
 						this.d_board.player.update(appData.x, appData.y, appData.radius);
 					}
@@ -562,8 +556,11 @@ function Game(canvas, d_canvas) {
 				this.d_board.draw(this.d_board.player);				
 				if (!!this.d_board.useLineTo) {
 					this.d_board.draw(this.d_board.obstacles, 'lineTo');
+					this.d_board.obstacles.top.splice(0,1);
+					this.d_board.obstacles.bottom.splice(0,1);
 				} else {
 					for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
+					this.d_board.obstacles.splice(0,2);
 				}
 				this.boardIndex = 1;
 			} else {

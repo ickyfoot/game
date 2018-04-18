@@ -40,8 +40,8 @@ function Physics() {
 		var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta,
 			fullSpeed, throttledSpeed, tempRadius, tempX, tempY, tempDim, newPosition;
 		// determine if player piece movement or resizing should be throttled
-		fullSpeed = 5;
-		throttledSpeed = 2;
+		fullSpeed = 2;
+		throttledSpeed = 1;
 		xThrottle = (!!data.controls.pressedKeys['x'] || !!data.controls.pressedKeys['X']);
 		yThrottle = (!!data.controls.pressedKeys['c'] || !!data.controls.pressedKeys['C']);
 		zThrottle = (!!data.controls.pressedKeys['z'] || !!data.controls.pressedKeys['Z'] || !!data.controls.pressedKeys['Shift']);
