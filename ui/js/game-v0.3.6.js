@@ -405,7 +405,7 @@ function Board(canvas) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = true;
+	this.useLineTo = false;
 	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
