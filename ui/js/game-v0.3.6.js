@@ -296,8 +296,9 @@ function Board(canvas, animation) {
 		}
 	}
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
-	this.draw = (entity, type) => {
-		drawType = (typeof type != 'undefined') ? type : entity.drawType;
+	this.draw = (entity, type, lag) => {
+		var drawType = (typeof type != 'undefined') ? type : entity.drawType;
+		var lag = (typeof lag != 'undefined') ? lag : 1;
 		switch(drawType) {
 			case 'arc':
 				this.context.beginPath();
@@ -348,7 +349,7 @@ function Board(canvas, animation) {
 				this.context.moveTo(0, 0);
 				this.context.lineTo(0, entity.top[0][1]);
 				for (var i = 0; i < entity.top.length; i++) {
-					entity.top[i][0] -= (!!this.animated) ? this.obstacleWidth : 0;
+					entity.top[i][0] -= (!!this.animated) ? this.obstacleWidth * lag : 0;
 					if (!!this.travelWithPath) {
 						entity.top[i][1] += this.topAdjust
 					}
@@ -409,7 +410,7 @@ function Board(canvas, animation) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = false;
+	this.useLineTo = true;
 	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
@@ -504,6 +505,7 @@ function Game(canvas, d_canvas) {
 		}
 	}
 	this.filteredObstacles;
+	this.lag = 0.0;
 	// main loop
 	this.run = () => {
 		// see here for consistent frame rate logic:
@@ -513,8 +515,12 @@ function Game(canvas, d_canvas) {
 			this.d_board.animated = true;
 			
 			// send info to Web Worker to determine if it's time to redraw
-			// redrawing is handled in this.worker callback defined in this.init
-			var i = 0;
+			// redrawing is handled in this.worker callback defined in this.init	
+			this.lag += this.animation.frameLength;
+			if (this.lag >= this.animation.fpsAsMilliseconds) {
+				this.updateGame();
+				this.lag -= this.animation.fpsAsMilliseconds;
+			}
 			
 			if (this.boardIndex < 0 || this.boardIndex > 0) {
 				// clear board to prepare for next animation state
@@ -535,8 +541,6 @@ function Game(canvas, d_canvas) {
 				this.boardIndex = -1;
 				if (this.status == 'collision') this.stop('over');*/
 			}
-			this.animation.frameLength = performance.now() - this.animation.lastFrame;
-			this.animation.lastFrame = performance.now();
 			//this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
 		}
 	}
@@ -560,42 +564,48 @@ function Game(canvas, d_canvas) {
 	
 	this.update;
 	
+	this.updateGame = () => {		
+		if (!!this.d_board.useLineTo) {
+			var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
+				return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+			});
+			var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
+				return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+			});
+			var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+			for (var i = 0; i < filteredObstacles.length; i++) {
+				if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
+					//console.log('stop');
+					//this.stop('over');
+				}
+			}
+			
+			// turn off collision detection
+			filteredObstacles = null;
+		} else {
+			var filteredObstacles = this.d_board.obstacles.filter((el) => {
+				return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
+			});
+		}
+		this.physics.worker.postMessage({
+			action: 'move player',
+			appData: {
+				player: this.d_board.player.dim,
+				board: {
+					width: this.d_board.dimensions.width,
+					height: this.d_board.dimensions.height
+				},
+				obstacles: filteredObstacles,
+				controls: this.controls
+			}
+		});
+	}
+	
 	this.advanceGame = () => {
 		return setInterval(() => {
-			if (!!this.d_board.useLineTo) {
-				var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
-					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
-				});
-				var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
-					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
-				});
-				var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-				for (var i = 0; i < filteredObstacles.length; i++) {
-					if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
-						console.log('stop');
-						//this.stop('over');
-					}
-				}
-				
-				// turn off collision detection
-				filteredObstacles = null;
-			} else {
-				var filteredObstacles = this.d_board.obstacles.filter((el) => {
-					return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
-				});
-			}
-			this.physics.worker.postMessage({
-				action: 'move player',
-				appData: {
-					player: this.d_board.player.dim,
-					board: {
-						width: this.d_board.dimensions.width,
-						height: this.d_board.dimensions.height
-					},
-					obstacles: filteredObstacles,
-					controls: this.controls
-				}
-			});
+			this.updateGame();
+			this.animation.frameLength = performance.now() - this.animation.lastFrame;
+			this.animation.lastFrame = performance.now();
 		}, this.animation.fpsAsMilliseconds);
 	}
 }
