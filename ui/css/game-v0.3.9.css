@@ -23,17 +23,15 @@ html, body {
 	background-color: var(--main-bg-color);
 	box-shadow:none;
 	box-sizing:border-box;
-	border: var(--game-board-border) solid var(--opaque-white);
 }
 
 #game-board,
 #drawing-board {
-	width: calc(100% - calc(2 * var(--game-board-border)));
-    height: calc(100% - calc(2 * var(--game-board-border)));
+	height:100%;
+	width:100%;
 	display:block;
     padding: 0;
 	overflow: hidden;
-	margin: var(--game-board-border) solid var(--opaque-white);
 	position:absolute;
 }
 

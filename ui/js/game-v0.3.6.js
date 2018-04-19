@@ -1,6 +1,8 @@
 function Animation() {
-	this.fps = 100;
+	this.fps = 60;
 	this.fpsAsMilliseconds = 1000/this.fps;
+	this.updateFps = 100;
+	this.updateFpsAsMilliseconds = 1000/this.updateFps;
 	this.frameCount = null;
 	this.frameLength = null;
 	this.lastFrame = null;
@@ -507,41 +509,43 @@ function Game(canvas, d_canvas) {
 	this.filteredObstacles;
 	this.lag = 0.0;
 	// main loop
-	this.run = () => {
+	this.run = (timestamp) => {
 		// see here for consistent frame rate logic:
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
-		this.animation.main = window.requestAnimationFrame(this.run);
-		if (this.status == 'playing' && this.animation.lastFrame !== null) {
-			this.d_board.animated = true;
-			
-			// send info to Web Worker to determine if it's time to redraw
-			// redrawing is handled in this.worker callback defined in this.init	
-			this.lag += this.animation.frameLength;
-			if (this.lag >= this.animation.fpsAsMilliseconds) {
-				this.updateGame();
-				this.lag -= this.animation.fpsAsMilliseconds;
-			}
-			
-			if (this.boardIndex < 0 || this.boardIndex > 0) {
-				// clear board to prepare for next animation state
-				this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
-				this.d_board.draw(this.d_board.player);				
-				if (!!this.d_board.useLineTo) {
-					this.d_board.draw(this.d_board.obstacles, 'lineTo');
-					this.d_board.obstacles.top.splice(0,1);
-					this.d_board.obstacles.bottom.splice(0,1);
-				} else {
-					for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
-					this.d_board.obstacles.splice(0,2);
+		if (timestamp < this.animation.lastFrame + this.animation.fpsAsMilliseconds) {
+			this.animation.main = window.requestAnimationFrame(this.run);
+			this.animation.lastFrame = timestamp;
+			if (this.status == 'playing' && this.animation.lastFrame !== null) {
+				this.d_board.animated = true;
+				
+				/*this.lag += this.animation.frameLength;
+				if (this.lag >= this.animation.fpsAsMilliseconds) {
+					console.log(this.lag)
+					this.updateGame();
+					this.lag -= this.animation.fpsAsMilliseconds;
+				}*/
+				
+				if (this.boardIndex < 0 || this.boardIndex > 0) {
+					// clear board to prepare for next animation state
+					this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
+					this.d_board.draw(this.d_board.player);				
+					if (!!this.d_board.useLineTo) {
+						this.d_board.draw(this.d_board.obstacles, 'lineTo');
+						this.d_board.obstacles.top.splice(0,1);
+						this.d_board.obstacles.bottom.splice(0,1);
+					} else {
+						for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
+						this.d_board.obstacles.splice(0,2);
+					}
+					this.boardIndex = 1;
+				/*} else {
+					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
+					this.board.context.drawImage(this.d_board.canvas, 0, 0);
+					this.boardIndex = -1;
+					if (this.status == 'collision') this.stop('over');*/
 				}
-				this.boardIndex = 1;
-			/*} else {
-				this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
-				this.board.context.drawImage(this.d_board.canvas, 0, 0);
-				this.boardIndex = -1;
-				if (this.status == 'collision') this.stop('over');*/
+				//this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
 			}
-			//this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
 		}
 	}
 	
@@ -549,7 +553,7 @@ function Game(canvas, d_canvas) {
 		this.animation.lastFrame = performance.now();
 		this.status = 'playing';
 		// start animation
-		this.run();
+		window.requestAnimationFrame(this.run);
 		// start game updates
 		this.update = this.advanceGame();
 	}
@@ -587,6 +591,9 @@ function Game(canvas, d_canvas) {
 				return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
 			});
 		}
+			
+		// send info to Web Worker to determine if it's time to redraw
+		// redrawing is handled in this.worker callback defined in this.init	
 		this.physics.worker.postMessage({
 			action: 'move player',
 			appData: {
@@ -603,11 +610,24 @@ function Game(canvas, d_canvas) {
 	
 	this.advanceGame = () => {
 		return setInterval(() => {
+			//this.animation.frameLength = Date.now() - this.animation.lastFrame;
+			//this.animation.lastFrame = Date.now();
 			this.updateGame();
-			this.animation.frameLength = performance.now() - this.animation.lastFrame;
-			this.animation.lastFrame = performance.now();
-		}, this.animation.fpsAsMilliseconds);
+		}, this.animation.updateFpsAsMilliseconds);
 	}
+	
+	/*this.advanceGame = () => {
+		var elapsed;
+		var time;
+		do {
+			time = new Date().getTime();
+			elapsed = time - this.animation.lastFrame;
+		} while (elapsed < this.animation.fpsAsMilliseconds);
+		this.animation.frameLength = time - this.animation.lastFrame;
+		this.animation.lastFrame = new Date().getTime();
+		this.updateGame();
+		this.advanceGame();
+	}*/
 }
 
 function Obstacle(x, y, w, h, r, g, b, a) {
