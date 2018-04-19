@@ -1,5 +1,5 @@
 function Animation() {
-	this.fps = 30;
+	this.fps = 100;
 	this.fpsAsMilliseconds = 1000/this.fps;
 	this.frameCount = null;
 	this.frameLength = null;
@@ -409,7 +409,7 @@ function Board(canvas, animation) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = true;
+	this.useLineTo = false;
 	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
@@ -493,7 +493,7 @@ function Game(canvas, d_canvas) {
 				case 'move player':
 					if (appData.collision != null) {
 						this.d_board.player.collided = true;
-						this.filteredObstacles[appData.collision].collided = true;
+						appData.collision.collided = true;
 						this.status = 'collision';
 					} else {
 						this.d_board.createObstacles();
@@ -509,48 +509,14 @@ function Game(canvas, d_canvas) {
 		// see here for consistent frame rate logic:
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
 		this.animation.main = window.requestAnimationFrame(this.run);
-
 		if (this.status == 'playing' && this.animation.lastFrame !== null) {
 			this.d_board.animated = true;
-			if (!!this.d_board.useLineTo) {
-				var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
-					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
-				});
-				var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
-					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
-				});
-				var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-				for (var i = 0; i < filteredObstacles.length; i++) {
-					if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
-						//console.log('stop');
-						//this.stop('over');
-					}
-				}
-				
-				// turn off collision detection
-				filteredObstacles = null;
-			} else {
-				var filteredObstacles = this.d_board.obstacles.filter((el) => {
-					return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
-				});
-			}
 			
 			// send info to Web Worker to determine if it's time to redraw
 			// redrawing is handled in this.worker callback defined in this.init
-			this.physics.worker.postMessage({
-				action: 'move player',
-				appData: {
-					player: this.d_board.player.dim,
-					board: {
-						width: this.d_board.dimensions.width,
-						height: this.d_board.dimensions.height
-					},
-					obstacles: filteredObstacles,
-					controls: this.controls
-				}
-			});
+			var i = 0;
 			
-			if (this.boardIndex < 0) {
+			if (this.boardIndex < 0 || this.boardIndex > 0) {
 				// clear board to prepare for next animation state
 				this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
 				this.d_board.draw(this.d_board.player);				
@@ -563,26 +529,74 @@ function Game(canvas, d_canvas) {
 					this.d_board.obstacles.splice(0,2);
 				}
 				this.boardIndex = 1;
-			} else {
+			/*} else {
 				this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 				this.board.context.drawImage(this.d_board.canvas, 0, 0);
 				this.boardIndex = -1;
-				if (this.status == 'collision') this.stop('over');
+				if (this.status == 'collision') this.stop('over');*/
 			}
-			this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
 			this.animation.frameLength = performance.now() - this.animation.lastFrame;
+			this.animation.lastFrame = performance.now();
+			//this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
 		}
 	}
 	
 	this.start = () => {
 		this.animation.lastFrame = performance.now();
 		this.status = 'playing';
+		// start animation
 		this.run();
+		// start game updates
+		this.update = this.advanceGame();
 	}
 	
 	this.stop = (status) => {
 		this.status = status;
+		// stop game updates
+		clearInterval(this.update);
+		// stop animation
 		window.cancelAnimationFrame(this.animation.main);
+	}
+	
+	this.update;
+	
+	this.advanceGame = () => {
+		return setInterval(() => {
+			if (!!this.d_board.useLineTo) {
+				var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
+					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+				});
+				var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
+					return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+				});
+				var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+				for (var i = 0; i < filteredObstacles.length; i++) {
+					if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
+						console.log('stop');
+						//this.stop('over');
+					}
+				}
+				
+				// turn off collision detection
+				filteredObstacles = null;
+			} else {
+				var filteredObstacles = this.d_board.obstacles.filter((el) => {
+					return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
+				});
+			}
+			this.physics.worker.postMessage({
+				action: 'move player',
+				appData: {
+					player: this.d_board.player.dim,
+					board: {
+						width: this.d_board.dimensions.width,
+						height: this.d_board.dimensions.height
+					},
+					obstacles: filteredObstacles,
+					controls: this.controls
+				}
+			});
+		}, this.animation.fpsAsMilliseconds);
 	}
 }
 

@@ -102,7 +102,7 @@ onmessage = function(e) {
 			postMessage({
 				action: 'move player',
 				appData: {
-					collision: collision,
+					collision: appData.obstacles[i],
 					radius: dim.radius,
 					x: dim.x,
 					y: dim.y
