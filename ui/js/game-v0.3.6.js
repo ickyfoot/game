@@ -1,5 +1,5 @@
 function Animation() {
-	this.fps = 60;
+	this.fps = 30;
 	this.fpsAsMilliseconds = 1000/this.fps;
 	this.updateFps = 100;
 	this.updateFpsAsMilliseconds = 1000/this.updateFps;
@@ -34,7 +34,7 @@ function Board(canvas, animation) {
 			// this is necessary because availableSpaces is calculated to determine how
 			// many rectangles of a given width can fit in the full board width
 			// but this leaves a gap at the end when doing pure line-to;
-			availableSpaces += 5; // 5 prevents flatlining at work, 4 works at home. Does 5 work at  home?
+			availableSpaces += 2; // 5 prevents flatlining at work, 2 prevents flatlining at home.
 			for (var i = 0; i < availableSpaces; i++) {
 				var yCenterOffset = this.yCenterOffset;
 				var yCenterOffsetMod = this.yCenterOffsetMod;
@@ -116,9 +116,9 @@ function Board(canvas, animation) {
 					// unpin path from top or bottom if necessary
 					if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
 						// home
-						// yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						// work
-						yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						//yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
 							? this.maxPinnedCount 
 							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
@@ -136,9 +136,31 @@ function Board(canvas, animation) {
 					this.yCenterOffsetMod = yCenterOffsetMod;
 				}
 				
-				this.obstacles.top.push([currentX,topHeight]);
-				this.obstacles.bottom.push([currentX,bottomY]);
+				//this.obstacles.top.push([currentX,topHeight]);
+				//this.obstacles.bottom.push([currentX,bottomY]);
 				
+				this.obstacles.top.push(new Obstacle(
+					currentX, // x
+					topY, // y
+					this.obstacleWidth, // width
+					topHeight, // height
+					this.rgba.red,
+					this.rgba.green,
+					this.rgba.blue,
+					this.rgba.opacity
+				));
+				
+				// create bottom obstacle and push into obstacles array
+				this.obstacles.bottom.push(new Obstacle(
+					currentX, // x
+					bottomY, // y
+					this.obstacleWidth, // w
+					bottomHeight, // h
+					this.rgba.red,
+					this.rgba.green,
+					this.rgba.blue,
+					this.rgba.opacity
+				));
 				//randomize color
 				//if ((i % 3 == 0) || (i % 2 == 0)) {
 				//	if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
@@ -242,9 +264,9 @@ function Board(canvas, animation) {
 					// unpin path from top or bottom if necessary
 					if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
 						// home
-						// yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						// work
-						yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+						// yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
 							? this.maxPinnedCount 
 							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
@@ -304,13 +326,13 @@ function Board(canvas, animation) {
 		switch(drawType) {
 			case 'arc':
 				this.context.beginPath();
-				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
 				if (!!entity.collided) {
 					console.log('player collided');
 					this.context.strokeStyle = 'rgba(200,20,20,1.0)';
 				} else {
 					this.context.strokeStyle = 'rgba(20,20,20,1.0)';
 				}
+				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
 				this.context.closePath();
 				this.context.stroke();
 			break;
@@ -349,15 +371,15 @@ function Board(canvas, animation) {
 				// draw top
 				this.context.beginPath();
 				this.context.moveTo(0, 0);
-				this.context.lineTo(0, entity.top[0][1]);
+				this.context.lineTo(0, entity.top[0].dim.h);
 				for (var i = 0; i < entity.top.length; i++) {
-					entity.top[i][0] -= (!!this.animated) ? this.obstacleWidth * lag : 0;
+					entity.top[i].dim.x -= (!!this.animated) ? this.obstacleWidth * lag : 0;
 					if (!!this.travelWithPath) {
-						entity.top[i][1] += this.topAdjust
+						entity.top[i].dim.y += this.topAdjust
 					}
-					this.context.lineTo(entity.top[i][0], entity.top[i][1]);
+					this.context.lineTo(entity.top[i].dim.x, entity.top[i].dim.h);
 				}
-				this.context.lineTo(this.dimensions.width, entity.top[entity.top.length - 1][1]);
+				this.context.lineTo(this.dimensions.width, entity.top[entity.top.length - 1].dim.h);
 				this.context.lineTo(this.dimensions.width, 0);
 				this.context.closePath();
 				this.context.fill();
@@ -365,15 +387,15 @@ function Board(canvas, animation) {
 				
 				// draw bottom
 				this.context.beginPath();
-				this.context.moveTo(0, entity.bottom[0][1]);
+				this.context.moveTo(0, entity.bottom[0].dim.y);
 				for (var i = 0; i < entity.bottom.length; i++) {
-					entity.bottom[i][0] -= (!!this.animated) ? this.obstacleWidth : 0;
+					entity.bottom[i].dim.x -= (!!this.animated) ? this.obstacleWidth : 0;
 					if (!!this.travelWithPath) {
-						entity.bottom[i][1] += this.topAdjust
+						entity.bottom[i].dim.y += this.topAdjust
 					}
-					this.context.lineTo(entity.bottom[i][0], entity.bottom[i][1]);
+					this.context.lineTo(entity.bottom[i].dim.x, entity.bottom[i].dim.y);
 				}
-				this.context.lineTo(this.dimensions.width, entity.bottom[entity.bottom.length - 1][1]);
+				this.context.lineTo(this.dimensions.width, entity.bottom[entity.bottom.length - 1].dim.y);
 				this.context.lineTo(this.dimensions.width, this.dimensions.height);
 				this.context.lineTo(0, this.dimensions.height);
 				this.context.closePath();
@@ -512,23 +534,15 @@ function Game(canvas, d_canvas) {
 	this.run = (timestamp) => {
 		// see here for consistent frame rate logic:
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
+		this.animation.main = window.requestAnimationFrame(this.run);
+		this.animation.lastFrame = timestamp;
+		this.d_board.animated = true;
 		if (timestamp < this.animation.lastFrame + this.animation.fpsAsMilliseconds) {
-			this.animation.main = window.requestAnimationFrame(this.run);
-			this.animation.lastFrame = timestamp;
 			if (this.status == 'playing' && this.animation.lastFrame !== null) {
-				this.d_board.animated = true;
-				
-				/*this.lag += this.animation.frameLength;
-				if (this.lag >= this.animation.fpsAsMilliseconds) {
-					console.log(this.lag)
-					this.updateGame();
-					this.lag -= this.animation.fpsAsMilliseconds;
-				}*/
-				
 				if (this.boardIndex < 0 || this.boardIndex > 0) {
 					// clear board to prepare for next animation state
 					this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
-					this.d_board.draw(this.d_board.player);				
+					this.d_board.draw(this.d_board.player);
 					if (!!this.d_board.useLineTo) {
 						this.d_board.draw(this.d_board.obstacles, 'lineTo');
 						this.d_board.obstacles.top.splice(0,1);
@@ -544,7 +558,12 @@ function Game(canvas, d_canvas) {
 					this.boardIndex = -1;
 					if (this.status == 'collision') this.stop('over');*/
 				}
-				//this.animation.lastFrame = performance.now() - ((performance.now() - this.animation.lastFrame) % this.animation.fpsAsMilliseconds);
+			} else {
+				if (this.status == 'collision') {
+					this.d_board.player.collided = true;
+					this.d_board.draw(this.d_board.player);
+					this.stop('over');
+				}
 			}
 		}
 	}
@@ -567,25 +586,15 @@ function Game(canvas, d_canvas) {
 	}
 	
 	this.update;
-	
-	this.updateGame = () => {		
+	this.updateGame = () => {
 		if (!!this.d_board.useLineTo) {
 			var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
-				return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+				return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
 			});
 			var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
-				return (el[0] > (this.d_board.player.dim.x - 5) && el[0] < (this.d_board.player.dim.x + 5));
+				return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
 			});
 			var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-			for (var i = 0; i < filteredObstacles.length; i++) {
-				if (!!this.d_board.context.isPointInPath(filteredObstacles[i][0], filteredObstacles[i][1])) {
-					//console.log('stop');
-					//this.stop('over');
-				}
-			}
-			
-			// turn off collision detection
-			filteredObstacles = null;
 		} else {
 			var filteredObstacles = this.d_board.obstacles.filter((el) => {
 				return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
