@@ -19,304 +19,155 @@ function Board(canvas, animation) {
 	this.canvas = canvas;
 	this.context = canvas.getContext('2d');
 	this.createObstacles = () => {
-		if (!!this.useLineTo) {
-			this.obstacleWidth = this.dimensions.width / this.maxObstacles;
-			var obstaclesLength = this.obstacles.top.length;
-			var availableSpace = this.dimensions.width - (obstaclesLength * this.obstacleWidth);
-			var availableSpaces = Math.ceil(availableSpace / this.obstacleWidth);
+		this.obstacleWidth = this.dimensions.width / this.maxObstacles;
+		var obstaclesLength = this.obstacles.top.length;
+		var availableSpace = this.dimensions.width - (obstaclesLength * this.obstacleWidth);
+		var availableSpaces = Math.ceil(availableSpace / this.obstacleWidth);
 
-			var pathPadding = this.obstaclePathMinHeight / 2;
-			// divide obstacles array length by 2 because obstacles come in pairs
-			var currentX = (obstaclesLength * this.obstacleWidth);
-			var minPathCenter = this.minObstacleHeight + pathPadding;
-			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
-			// add availableSpaces if this is a strictly lineTo draw
-			// this is necessary because availableSpaces is calculated to determine how
-			// many rectangles of a given width can fit in the full board width
-			// but this leaves a gap at the end when doing pure line-to;
-			availableSpaces += 2; // 5 prevents flatlining at work, 2 prevents flatlining at home.
-			for (var i = 0; i < availableSpaces; i++) {
-				var yCenterOffset = this.yCenterOffset;
-				var yCenterOffsetMod = this.yCenterOffsetMod;
-				var topY = 0;
-				var pathCenter = (this.dimensions.height / 2) - yCenterOffset;
-				var pinnedToTop = pathCenter < minPathCenter;
-				var pinnedToBottom = pathCenter > maxPathCenter
-				var pinned = (!!pinnedToTop || !!pinnedToBottom);
-				var topHeight = pathCenter - pathPadding;
+		var pathPadding = this.obstaclePathMinHeight / 2;
+		// divide obstacles array length by 2 because obstacles come in pairs
+		var currentX = (obstaclesLength * this.obstacleWidth);
+		var minPathCenter = this.minObstacleHeight + pathPadding;
+		var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
+		// add availableSpaces if this is a strictly lineTo draw
+		// this is necessary because availableSpaces is calculated to determine how
+		// many rectangles of a given width can fit in the full board width
+		// but this leaves a gap at the end when doing pure line-to;
+		availableSpaces += 2; // 5 prevents flatlining at work, 2 prevents flatlining at home.
+		for (var i = 0; i < availableSpaces; i++) {
+			var yCenterOffset = this.yCenterOffset;
+			var yCenterOffsetMod = this.yCenterOffsetMod;
+			var topY = 0;
+			var pathCenter = (this.dimensions.height / 2) - yCenterOffset;
+			var pinnedToTop = pathCenter < minPathCenter;
+			var pinnedToBottom = pathCenter > maxPathCenter
+			var pinned = (!!pinnedToTop || !!pinnedToBottom);
+			var topHeight = pathCenter - pathPadding;
 
-				if (!!pinnedToTop) pathCenter = minPathCenter;
+			if (!!pinnedToTop) pathCenter = minPathCenter;
 
-				if (!!pinnedToBottom) pathCenter = maxPathCenter;
+			if (!!pinnedToBottom) pathCenter = maxPathCenter;
+			
+			yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
 				
-				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
-					
-				// ensure it doesn't get too difficult
-				yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
-					? 10 
-					: 0;
-				yCenterOffsetMod += (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
-					? 10
-					: 0;
+			// ensure it doesn't get too difficult
+			yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
+				? 10 
+				: 0;
+			yCenterOffsetMod += (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
+				? 10
+				: 0;
+			
+			// randomize y offset direction
+			if (!pinned) yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
+			
+			if (!!this.travelWithPath) {
+				// board travels vertically with path
 				
-				// randomize y offset direction
-				if (!pinned) yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
-				
-				if (!!this.travelWithPath) {
-					// board travels vertically with path
-					
-					if (pathCenter <= pathPadding) {
-						// encrouching on top, need to adjust top by the difference between pathPadding and pathCenter
-						this.topAdjust = pathPadding - pathCenter;				
-						topY -= this.topAdjust;
-					}
-					
-					if (pathCenter >= (this.dimensions.height - pathPadding)) {
-						//encroaching on bottom
-						this.topAdjust = pathPadding + pathCenter;
-						topHeight -= this.topAdjust;
-					}
-					
-					// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-					var bottomY = pathCenter + pathPadding;
-					
-					// set bottomHeight
-					var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;// increase difficulty as path progresses 
-				
-					// randomize the amount by which y is offset
-					this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-					this.yCenterOffsetMod = yCenterOffsetMod;
-				} else {
-					// path is bounded within the board
-					
-					// ensure top obstacles always have a height of at least this.minObstacleHeight
-					if (!!pinnedToTop) {
-						topHeight = this.minObstacleHeight;
-						this.pinnedToTopCount++;
-					}
-					
-					// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-					var bottomY = topHeight + this.obstaclePathMinHeight;
-					
-					// ensure y coordinate is always at least this.minObstacleHeight less than board height
-					// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
-					if (!!pinnedToBottom) {
-						bottomY = this.dimensions.height - this.minObstacleHeight;
-						this.pinnedToBottomCount++;
-					}
-
-					// set bottomHeight
-					var bottomHeight = this.dimensions.height - bottomY;
-					
-					// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
-					topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
-						? bottomY - this.obstaclePathMinHeight 
-						: topHeight;
-					
-					// unpin path from top or bottom if necessary
-					if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
-						// home
-						yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-						// work
-						//yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-							? this.maxPinnedCount 
-							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-						this.pinnedToTopCount = 0;
-					} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
-						yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
-						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-							? this.maxPinnedCount 
-							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-						this.pinnedToBottomCount = 0;
-					}
-
-					// randomize the amount by which y is offset unless it's been reset because it's pinned
-					this.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-					this.yCenterOffsetMod = yCenterOffsetMod;
+				if (pathCenter <= pathPadding) {
+					// encrouching on top, need to adjust top by the difference between pathPadding and pathCenter
+					this.topAdjust = pathPadding - pathCenter;				
+					topY -= this.topAdjust;
 				}
 				
-				//this.obstacles.top.push([currentX,topHeight]);
-				//this.obstacles.bottom.push([currentX,bottomY]);
+				if (pathCenter >= (this.dimensions.height - pathPadding)) {
+					//encroaching on bottom
+					this.topAdjust = pathPadding + pathCenter;
+					topHeight -= this.topAdjust;
+				}
 				
-				this.obstacles.top.push(new Obstacle(
-					currentX, // x
-					topY, // y
-					this.obstacleWidth, // width
-					topHeight, // height
-					this.rgba.red,
-					this.rgba.green,
-					this.rgba.blue,
-					this.rgba.opacity
-				));
+				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
+				var bottomY = pathCenter + pathPadding;
 				
-				// create bottom obstacle and push into obstacles array
-				this.obstacles.bottom.push(new Obstacle(
-					currentX, // x
-					bottomY, // y
-					this.obstacleWidth, // w
-					bottomHeight, // h
-					this.rgba.red,
-					this.rgba.green,
-					this.rgba.blue,
-					this.rgba.opacity
-				));
-				//randomize color
-				//if ((i % 3 == 0) || (i % 2 == 0)) {
-				//	if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
-				//	else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
-				//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
-				
-				// update the x coordinates for the next pair of obstacles
-				currentX += this.obstacleWidth;
-			}
-		} else {
-			this.obstacleWidth = this.dimensions.width / this.maxObstacles;
-			// divide obstacles array length by 2 because obstacles come in pairs
-			var obstaclesLength = this.obstacles.length / 2;
-			var availableSpace = this.dimensions.width - (obstaclesLength * this.obstacleWidth);
-			var availableSpaces = Math.ceil(availableSpace / this.obstacleWidth);
-
-			var pathPadding = this.obstaclePathMinHeight / 2;
-			// divide obstacles array length by 2 because obstacles come in pairs
-			var currentX = obstaclesLength * this.obstacleWidth;
-			var minPathCenter = this.minObstacleHeight + pathPadding;
-			var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
+				// set bottomHeight
+				var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;// increase difficulty as path progresses 
 			
-			for (var i = 0; i < availableSpaces; i++) {
-				var yCenterOffset = this.yCenterOffset;
-				var yCenterOffsetMod = this.yCenterOffsetMod;
-				var topY = 0;
-				var pathCenter = (this.dimensions.height / 2) - yCenterOffset;
-				var pinnedToTop = pathCenter < minPathCenter;
-				var pinnedToBottom = pathCenter > maxPathCenter
-				var pinned = (!!pinnedToTop || !!pinnedToBottom);
-				var topHeight = pathCenter - pathPadding;
+				// randomize the amount by which y is offset
+				this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
+				this.yCenterOffsetMod = yCenterOffsetMod;
+			} else {
+				// path is bounded within the board
+				
+				// ensure top obstacles always have a height of at least this.minObstacleHeight
+				if (!!pinnedToTop) {
+					topHeight = this.minObstacleHeight;
+					this.pinnedToTopCount++;
+				}
+				
+				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
+				var bottomY = topHeight + this.obstaclePathMinHeight;
+				
+				// ensure y coordinate is always at least this.minObstacleHeight less than board height
+				// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
+				if (!!pinnedToBottom) {
+					bottomY = this.dimensions.height - this.minObstacleHeight;
+					this.pinnedToBottomCount++;
+				}
 
-				if (!!pinnedToTop) pathCenter = minPathCenter;
+				// set bottomHeight
+				var bottomHeight = this.dimensions.height - bottomY;
+				
+				// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
+				topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
+					? bottomY - this.obstaclePathMinHeight 
+					: topHeight;
+				
+				// unpin path from top or bottom if necessary
+				if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
+					// home
+					yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+					// work
+					//yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
+						? this.maxPinnedCount 
+						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+					this.pinnedToTopCount = 0;
+				} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
+					yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
+					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
+						? this.maxPinnedCount 
+						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+					this.pinnedToBottomCount = 0;
+				}
 
-				if (!!pinnedToBottom) pathCenter = maxPathCenter;
-				
-				yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
-					
-				// ensure it doesn't get too difficult
-				yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
-					? this.minObstacleHeight 
-					: 0;
-				yCenterOffsetMod += (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
-					? this.minObstacleHeight 
-					: 0;
-				
-				// randomize y offset direction
-				if (!pinned) yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
-				
-				if (!!this.travelWithPath) {
-					// board travels vertically with path
-					
-					if (pathCenter <= pathPadding) {
-						// encrouching on top, need to adjust top by the difference between pathPadding and pathCenter
-						this.topAdjust = pathPadding - pathCenter;				
-						topY -= this.topAdjust;
-					}
-					
-					if (pathCenter >= (this.dimensions.height - pathPadding)) {
-						//encroaching on bottom
-						this.topAdjust = pathPadding + pathCenter;
-						topHeight -= this.topAdjust;
-					}
-					
-					// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-					var bottomY = pathCenter + pathPadding;
-					
-					// set bottomHeight
-					var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;// increase difficulty as path progresses 
-				
-					// randomize the amount by which y is offset
-					this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-					this.yCenterOffsetMod = yCenterOffsetMod;
-				} else {
-					// path is bounded within the board
-					
-					// ensure top obstacles always have a height of at least this.minObstacleHeight
-					if (!!pinnedToTop) {
-						topHeight = this.minObstacleHeight;
-						this.pinnedToTopCount++;
-					}
-					
-					// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-					var bottomY = topHeight + this.obstaclePathMinHeight;
-					
-					// ensure y coordinate is always at least this.minObstacleHeight less than board height
-					// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
-					if (!!pinnedToBottom) {
-						bottomY = this.dimensions.height - this.minObstacleHeight;
-						this.pinnedToBottomCount++;
-					}
-
-					// set bottomHeight
-					var bottomHeight = this.dimensions.height - bottomY;
-					
-					// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
-					topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
-						? bottomY - this.obstaclePathMinHeight 
-						: topHeight;
-					
-					// unpin path from top or bottom if necessary
-					if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
-						// home
-						yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-						// work
-						// yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-							? this.maxPinnedCount 
-							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-						this.pinnedToTopCount = 0;
-					} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
-						yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
-						this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-							? this.maxPinnedCount 
-							: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-						this.pinnedToBottomCount = 0;
-					}
-
-					// randomize the amount by which y is offset unless it's been reset because it's pinned
-					this.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-					this.yCenterOffsetMod = yCenterOffsetMod;
-				}				
-				
-				// create top obstacle and push into obstacles array
-				this.obstacles.push(new Obstacle(
-					currentX, // x
-					topY, // y
-					this.obstacleWidth, // width
-					topHeight, // height
-					this.rgba.red,
-					this.rgba.green,
-					this.rgba.blue,
-					this.rgba.opacity
-				));
-				
-				// create bottom obstacle and push into obstacles array
-				this.obstacles.push(new Obstacle(
-					currentX, // x
-					bottomY, // y
-					this.obstacleWidth, // w
-					bottomHeight, // h
-					this.rgba.red,
-					this.rgba.green,
-					this.rgba.blue,
-					this.rgba.opacity
-				));
-				
-				//randomize color
-				/* if ((i % 3 == 0) || (i % 2 == 0)) {
-					if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
-					else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
-				} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red); */
-				
-				// update the x coordinates for the next pair of obstacles
-				currentX += this.obstacleWidth;
+				// randomize the amount by which y is offset unless it's been reset because it's pinned
+				this.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
+				this.yCenterOffsetMod = yCenterOffsetMod;
 			}
+			
+			//this.obstacles.top.push([currentX,topHeight]);
+			//this.obstacles.bottom.push([currentX,bottomY]);
+			
+			this.obstacles.top.push(new Obstacle(
+				currentX, // x
+				topY, // y
+				this.obstacleWidth, // width
+				topHeight, // height
+				this.rgba.red,
+				this.rgba.green,
+				this.rgba.blue,
+				this.rgba.opacity
+			));
+			
+			// create bottom obstacle and push into obstacles array
+			this.obstacles.bottom.push(new Obstacle(
+				currentX, // x
+				bottomY, // y
+				this.obstacleWidth, // w
+				bottomHeight, // h
+				this.rgba.red,
+				this.rgba.green,
+				this.rgba.blue,
+				this.rgba.opacity
+			));
+			//randomize color
+			//if ((i % 3 == 0) || (i % 2 == 0)) {
+			//	if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
+			//	else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
+			//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
+			
+			// update the x coordinates for the next pair of obstacles
+			currentX += this.obstacleWidth;
 		}
 	}
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
@@ -411,7 +262,10 @@ function Board(canvas, animation) {
 	this.maxYCenterOffsetMod = 30;
 	this.minObstacleHeight = 40;
 	this.obstaclePathMinHeight = 200;
-	this.obstacles = [];
+	this.obstacles = {
+		top: [],
+		bottom: []
+	};
 	this.pinnedToTopCount = 0;
 	this.pinnedToBottomCount = 0;
 	this.rgba = {
@@ -431,18 +285,9 @@ function Board(canvas, animation) {
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
 	
-	this.useLineTo = true;
-	
 	// the amount by which yCenterOffset varies from one obstacle to the next
 	this.yCenterOffsetMod = 10;
-	this.player = null
-	
-	if (!!this.useLineTo) {
-		this.obstacles = {
-			top: [],
-			bottom: []
-		}
-	}
+	this.player = null;
 }
 
 function Controls() {
@@ -496,11 +341,7 @@ function Game(canvas, d_canvas) {
 		this.d_board.draw(this.d_board.player);
 		
 		// obstacles
-		if (!!this.d_board.useLineTo) {
-			this.d_board.draw(this.d_board.obstacles, 'lineTo');
-		} else {
-			for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
-		}
+		this.d_board.draw(this.d_board.obstacles, 'lineTo');
 		
 		this.board.context.drawImage(this.d_board.canvas, 0, 0);
 		
@@ -540,14 +381,9 @@ function Game(canvas, d_canvas) {
 					// clear board to prepare for next animation state
 					this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
 					this.d_board.draw(this.d_board.player);
-					if (!!this.d_board.useLineTo) {
-						this.d_board.draw(this.d_board.obstacles, 'lineTo');
-						this.d_board.obstacles.top.splice(0,1);
-						this.d_board.obstacles.bottom.splice(0,1);
-					} else {
-						for (var i = 0; i < this.d_board.obstacles.length; i++) this.d_board.draw(this.d_board.obstacles[i]);
-						this.d_board.obstacles.splice(0,2);
-					}
+					this.d_board.draw(this.d_board.obstacles, 'lineTo');
+					this.d_board.obstacles.top.splice(0,1);
+					this.d_board.obstacles.bottom.splice(0,1);
 					this.boardIndex = 1;
 				/*} else {
 					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
@@ -584,19 +420,13 @@ function Game(canvas, d_canvas) {
 	
 	this.update;
 	this.updateGame = () => {
-		if (!!this.d_board.useLineTo) {
-			var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
-				return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
-			});
-			var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
-				return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
-			});
-			var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-		} else {
-			var filteredObstacles = this.d_board.obstacles.filter((el) => {
-				return el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5);
-			});
-		}
+		var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
+			return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
+		});
+		var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
+			return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
+		});
+		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 			
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
