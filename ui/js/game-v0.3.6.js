@@ -53,10 +53,10 @@ function Board(canvas, animation) {
 					
 				// ensure it doesn't get too difficult
 				yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
-					? this.minObstacleHeight 
+					? 10 
 					: 0;
 				yCenterOffsetMod += (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
-					? this.minObstacleHeight 
+					? 10
 					: 0;
 				
 				// randomize y offset direction
@@ -328,13 +328,14 @@ function Board(canvas, animation) {
 				this.context.beginPath();
 				if (!!entity.collided) {
 					console.log('player collided');
-					this.context.strokeStyle = 'rgba(200,20,20,1.0)';
+					this.context.strokeStyle = this.context.fillStyle = 'rgba(200,20,20,1.0)';
 				} else {
-					this.context.strokeStyle = 'rgba(20,20,20,1.0)';
+					this.context.strokeStyle = this.context.fillStyle = 'rgba(20,20,20,1.0)';
 				}
 				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
+				this.context.lineWidth = 3;
 				this.context.closePath();
-				this.context.stroke();
+				this.context.fill();
 			break;
 			case 'path':
 				entity.dim.x -= (!!this.animated) ? entity.dim.w : 0;
@@ -360,13 +361,9 @@ function Board(canvas, animation) {
 				this.context.stroke();
 			break;
 			case 'lineTo':
-				if (!!entity.collided) {
-					this.context.fillStyle = 'rgba(200,'+this.rgba.green+',20,'+this.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba(200,'+this.rgba.green+',20,'+this.rgba.opacity+')';
-				} else {
-					this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+this.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+this.rgba.opacity+')';
-				}
+				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
+				this.context.lineWidth = 3;
+				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
 
 				// draw top
 				this.context.beginPath();
@@ -411,7 +408,7 @@ function Board(canvas, animation) {
 	this.maxPinnedCount = 15;
 	this.currentMaxPinnedCount = this.maxPinnedCount;
 	this.minPinnedCount = 3;
-	this.maxYCenterOffsetMod = 40;
+	this.maxYCenterOffsetMod = 30;
 	this.minObstacleHeight = 40;
 	this.obstaclePathMinHeight = 200;
 	this.obstacles = [];
