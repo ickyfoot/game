@@ -48,7 +48,7 @@ function Board(canvas, animation) {
 
 			if (!!pinnedToBottom) pathCenter = maxPathCenter;
 			
-			yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
+			//yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
 				
 			// ensure it doesn't get too difficult
 			yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
@@ -261,7 +261,7 @@ function Board(canvas, animation) {
 	this.minPinnedCount = 3;
 	this.maxYCenterOffsetMod = 30;
 	this.minObstacleHeight = 40;
-	this.obstaclePathMinHeight = 200;
+	this.obstaclePathMinHeight = 600;
 	this.obstacles = {
 		top: [],
 		bottom: []
