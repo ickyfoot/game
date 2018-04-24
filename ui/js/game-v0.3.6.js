@@ -77,7 +77,7 @@ function Board(canvas, animation) {
 				}
 				
 				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-				var bottomY = pathCenter + pathPadding;
+				var bottomY = Physics.prototype.getRandomInteger(pathCenter + pathPadding, pathCenter + pathPadding + Physics.prototype.getRandomInteger(10,100));
 				
 				// set bottomHeight
 				var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;// increase difficulty as path progresses 
@@ -95,7 +95,7 @@ function Board(canvas, animation) {
 				}
 				
 				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-				var bottomY = topHeight + this.obstaclePathMinHeight;
+				var bottomY = topHeight + this.obstaclePathMinHeight + Physics.prototype.getRandomInteger(1,10);
 				
 				// ensure y coordinate is always at least this.minObstacleHeight less than board height
 				// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
@@ -110,14 +110,14 @@ function Board(canvas, animation) {
 				// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
 				topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
 					? bottomY - this.obstaclePathMinHeight 
-					: topHeight;
+					: topHeight + Physics.prototype.getRandomInteger(10,100);
 				
 				// unpin path from top or bottom if necessary
 				if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
 					// home
-					yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+					// yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 					// work
-					//yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+					yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
 						? this.maxPinnedCount 
 						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
@@ -385,11 +385,6 @@ function Game(canvas, d_canvas) {
 					this.d_board.obstacles.top.splice(0,1);
 					this.d_board.obstacles.bottom.splice(0,1);
 					this.boardIndex = 1;
-				/*} else {
-					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
-					this.board.context.drawImage(this.d_board.canvas, 0, 0);
-					this.boardIndex = -1;
-					if (this.status == 'collision') this.stop('over');*/
 				}
 			} else {
 				if (this.status == 'collision') {
