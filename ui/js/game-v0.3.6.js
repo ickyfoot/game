@@ -188,29 +188,6 @@ function Board(canvas, animation) {
 				this.context.closePath();
 				this.context.fill();
 			break;
-			case 'path':
-				entity.dim.x -= (!!this.animated) ? entity.dim.w : 0;
-				if (!!this.travelWithPath) {
-					entity.dim.y += this.topAdjust
-					entity.dim.h -= this.topAdjust;
-				}
-				this.context.beginPath();
-				this.context.moveTo(entity.dim.x, entity.dim.y);
-				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
-				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y + entity.dim.h);
-				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
-				this.context.closePath();
-				if (!!entity.collided) {
-					console.log('obstacle collided');
-					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-				} else {
-					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-				}
-				this.context.fill();
-				this.context.stroke();
-			break;
 			case 'lineTo':
 				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
 				this.context.lineWidth = 3;
@@ -250,7 +227,50 @@ function Board(canvas, animation) {
 				this.context.fill();
 				this.context.stroke();
 			break;
-			case 'point':
+			
+			// remove
+			case 'path':
+				entity.dim.x -= (!!this.animated) ? entity.dim.w : 0;
+				if (!!this.travelWithPath) {
+					entity.dim.y += this.topAdjust
+					entity.dim.h -= this.topAdjust;
+				}
+				this.context.beginPath();
+				this.context.moveTo(entity.dim.x, entity.dim.y);
+				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
+				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y + entity.dim.h);
+				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
+				this.context.closePath();
+				if (!!entity.collided) {
+					console.log('obstacle collided');
+					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+				} else {
+					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
+					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
+				}
+				this.context.fill();
+				this.context.stroke();
+			break;
+			case 'rect':
+			console.log(entity);
+				entity.dim.x = (!!this.animated) ? Physics.prototype.getRandomInteger(1,3) : this.dimensions.w - entity.dim.w - 10;
+				entity.dim.y = (!!this.animated) ? Physics.prototype.getRandomInteger(1,3) : this.dimensions.height / 2;
+				if (!!this.travelWithPath) {
+					entity.dim.y += this.topAdjust
+					entity.dim.h -= this.topAdjust;
+				}
+				this.context.rect(entity.dim.x, entity.dim.y, entity.dim.w, entity.dim.h);
+				/*if (!!entity.collided) {
+					console.log('obstacle collided');
+					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+				} else {*/
+					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
+					this.context.strokeStyle = 'rgba('+entity.rgba.red+',255,'+entity.rgba.blue+','+entity.rgba.opacity+')';
+				/*}*/
+				this.context.fill();
+				this.context.stroke();
 			break;
 		}
 	}
@@ -296,6 +316,31 @@ function Controls() {
 	this.pressedKeys = {};
 }
 
+function Enemy(w, h) {
+	this.dim = {
+		h: h,
+		originalDim: {
+			h: h,
+			w: w
+		},
+		w: w,
+		movement: 'random'
+	}
+	this.drawType = 'rect';
+	this.update = (x, y, w, h) => {
+		this.dim.x = x;
+		this.dim.y = y;
+		this.dim.w = w;
+		this.dim.h = h;
+	}
+	this.rgba = {
+		red: 20,
+		green: 120,
+		blue: 20,
+		opacity: 1.0
+	}
+}
+
 function Flow() {
 	this.init = () => {
 	}
@@ -317,8 +362,6 @@ function Game(canvas, d_canvas) {
 	this.animation = new Animation();
 	// display board
 	this.board = new Board(canvas, this.animation);
-	// drawing board
-	this.d_board = new Board(d_canvas, this.animation);
 	
 	this.boardIndex = 1;
 	this.controls = new Controls();	
@@ -331,19 +374,25 @@ function Game(canvas, d_canvas) {
 	this.init = () => {
 		// set up entities
 			// player
-		this.d_board.player = new Player(15, this.d_board.dimensions.height/2, 5);
+		this.board.player = new Player(15, this.board.dimensions.height/2, 5);
 		
 			// obstacles
-		this.d_board.createObstacles();
+		this.board.createObstacles();
+		
+			//enemy
+		this.board.enemy = new Enemy(30, 10);
 
 		// draw entities
-		// player
-		this.d_board.draw(this.d_board.player);
+			// player
+		this.board.draw(this.board.player);
 		
-		// obstacles
-		this.d_board.draw(this.d_board.obstacles, 'lineTo');
+			// obstacles
+		this.board.draw(this.board.obstacles, 'lineTo');
 		
-		this.board.context.drawImage(this.d_board.canvas, 0, 0);
+			// obstacles
+		this.board.draw(this.board.enemy);
+		
+		//this.board.context.drawImage(this.board.canvas, 0, 0);
 		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
@@ -355,12 +404,12 @@ function Game(canvas, d_canvas) {
 				// call for controlling the player
 				case 'move player':
 					if (appData.collision != null) {
-						this.d_board.player.collided = true;
+						this.board.player.collided = true;
 						appData.collision.collided = true;
 						this.status = 'collision';
 					} else {
-						this.d_board.createObstacles();
-						this.d_board.player.update(appData.x, appData.y, appData.radius);
+						this.board.createObstacles();
+						this.board.player.update(appData.x, appData.y, appData.radius);
 					}
 				break;
 			}
@@ -374,22 +423,22 @@ function Game(canvas, d_canvas) {
 		// https://stackoverflow.com/questions/19764018/controlling-fps-with-requestanimationframe
 		this.animation.main = window.requestAnimationFrame(this.run);
 		this.animation.lastFrame = timestamp;
-		this.d_board.animated = true;
+		this.board.animated = true;
 		if (timestamp < this.animation.lastFrame + this.animation.fpsAsMilliseconds) {
 			if (this.status == 'playing' && this.animation.lastFrame !== null) {
 				if (this.boardIndex < 0 || this.boardIndex > 0) {
 					// clear board to prepare for next animation state
-					this.d_board.context.clearRect(0,0,this.d_board.dimensions.width,this.d_board.dimensions.height);
-					this.d_board.draw(this.d_board.player);
-					this.d_board.draw(this.d_board.obstacles, 'lineTo');
-					this.d_board.obstacles.top.splice(0,1);
-					this.d_board.obstacles.bottom.splice(0,1);
+					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
+					this.board.draw(this.board.player);
+					this.board.draw(this.board.obstacles, 'lineTo');
+					this.board.obstacles.top.splice(0,1);
+					this.board.obstacles.bottom.splice(0,1);
 					this.boardIndex = 1;
 				}
 			} else {
 				if (this.status == 'collision') {
-					this.d_board.player.collided = true;
-					this.d_board.draw(this.d_board.player);
+					this.board.player.collided = true;
+					this.board.draw(this.board.player);
 					this.stop('over');
 				}
 			}
@@ -415,23 +464,26 @@ function Game(canvas, d_canvas) {
 	
 	this.update;
 	this.updateGame = () => {
-		var filteredTopObstacles = this.d_board.obstacles.top.filter((el) => {
-			return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
+		var filteredTopObstacles = this.board.obstacles.top.filter((el) => {
+			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
 		});
-		var filteredBottomObstacles = this.d_board.obstacles.bottom.filter((el) => {
-			return (el.dim.x > (this.d_board.player.dim.x - 5) && el.dim.x < (this.d_board.player.dim.x + 5));
+		var filteredBottomObstacles = this.board.obstacles.bottom.filter((el) => {
+			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
 		});
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 			
+			// obstacles
+		this.board.draw(this.board.enemy);
+		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
 		this.physics.worker.postMessage({
 			action: 'move player',
 			appData: {
-				player: this.d_board.player.dim,
+				player: this.board.player.dim,
 				board: {
-					width: this.d_board.dimensions.width,
-					height: this.d_board.dimensions.height
+					width: this.board.dimensions.width,
+					height: this.board.dimensions.height
 				},
 				obstacles: filteredObstacles,
 				controls: this.controls
@@ -560,15 +612,11 @@ function Player(x, y, r) {
 
 $(document).on('ready',function() {
 	var canvas = document.getElementById('game-board');
-	var d_canvas = document.getElementById('drawing-board');
 	$(canvas).attr('width', $('#container').width());
 	$(canvas).attr('height', $('#container').height());
 	
-	$(d_canvas).attr('width', $('#container').width());
-	$(d_canvas).attr('height', $('#container').height());
-	
 	// set up board
-	var game = new Game(canvas, d_canvas);
+	var game = new Game(canvas);
 	game.init();	
 		
 	ickyfoot.setUpKeyDetection(function(key,type) {

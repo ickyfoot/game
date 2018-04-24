@@ -25,18 +25,13 @@ html, body {
 	box-sizing:border-box;
 }
 
-#game-board,
-#drawing-board {
+#game-board {
 	height:100%;
 	width:100%;
 	display:block;
     padding: 0;
 	overflow: hidden;
 	position:absolute;
-}
-
-#game-board {
-	visibility: hidden;
 }
 
 #game-piece {
