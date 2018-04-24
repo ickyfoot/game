@@ -189,10 +189,6 @@ function Board(canvas, animation) {
 				this.context.fill();
 			break;
 			case 'lineTo':
-				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
-				this.context.lineWidth = 3;
-				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
-
 				// draw top
 				this.context.beginPath();
 				this.context.moveTo(0, 0);
@@ -207,6 +203,10 @@ function Board(canvas, animation) {
 				this.context.lineTo(this.dimensions.width, entity.top[entity.top.length - 1].dim.h);
 				this.context.lineTo(this.dimensions.width, 0);
 				this.context.closePath();
+				
+				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
+				this.context.lineWidth = 3;
+				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
 				this.context.fill();
 				this.context.stroke();
 				
@@ -224,6 +224,10 @@ function Board(canvas, animation) {
 				this.context.lineTo(this.dimensions.width, this.dimensions.height);
 				this.context.lineTo(0, this.dimensions.height);
 				this.context.closePath();
+				
+				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
+				this.context.lineWidth = 3;
+				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
 				this.context.fill();
 				this.context.stroke();
 			break;
@@ -254,8 +258,17 @@ function Board(canvas, animation) {
 			break;
 			case 'rect':
 			console.log(entity);
-				entity.dim.x = (!!this.animated) ? Physics.prototype.getRandomInteger(1,3) : this.dimensions.w - entity.dim.w - 10;
-				entity.dim.y = (!!this.animated) ? Physics.prototype.getRandomInteger(1,3) : this.dimensions.height / 2;
+				var xMod = Physics.prototype.getRandomInteger(1,3);
+				var yMod = Physics.prototype.getRandomInteger(1,7);
+				xMod = Physics.prototype.toggleValue(xMod, -Math.abs(xMod));
+				
+				entity.dim.x = (!!this.animated) 
+					? entity.dim.x - xMod
+					: this.dimensions.width - entity.dim.w - 10;
+				entity.dim.y = (!!this.animated) 
+					? entity.dim.y - yMod 
+					: this.dimensions.height / 2;
+					
 				if (!!this.travelWithPath) {
 					entity.dim.y += this.topAdjust
 					entity.dim.h -= this.topAdjust;
@@ -266,8 +279,8 @@ function Board(canvas, animation) {
 					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 				} else {*/
-					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba('+entity.rgba.red+',255,'+entity.rgba.blue+','+entity.rgba.opacity+')';
+					this.context.fillStyle = 'rgba('+entity.rgba.red+',255,'+entity.rgba.blue+','+entity.rgba.opacity+')';
+					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
 				/*}*/
 				this.context.fill();
 				this.context.stroke();
@@ -430,6 +443,7 @@ function Game(canvas, d_canvas) {
 					// clear board to prepare for next animation state
 					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 					this.board.draw(this.board.player);
+					this.board.draw(this.board.enemy);
 					this.board.draw(this.board.obstacles, 'lineTo');
 					this.board.obstacles.top.splice(0,1);
 					this.board.obstacles.bottom.splice(0,1);
@@ -439,6 +453,7 @@ function Game(canvas, d_canvas) {
 				if (this.status == 'collision') {
 					this.board.player.collided = true;
 					this.board.draw(this.board.player);
+					this.board.draw(this.board.enemy);
 					this.stop('over');
 				}
 			}
@@ -471,9 +486,6 @@ function Game(canvas, d_canvas) {
 			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
 		});
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-			
-			// obstacles
-		this.board.draw(this.board.enemy);
 		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
