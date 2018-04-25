@@ -201,12 +201,13 @@ function Board(canvas, animation) {
 						this.context.fillStyle = 'rgba('+entity[i].rgba.red+',255,'+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 						this.context.strokeStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 					/*}*/
+					
+					entity.xMod = Physics.prototype.getRandomInteger(15,20);
 							
 					if (entity[i].yDirCount.up > 20) entity[i].yDirCount.up = 0;
 					else if (entity[i].yDirCount.down > 20) entity[i].yDirCount.down = 0;
 					
 					if (entity[i].yDirCount.up == 0 && entity[i].yDirCount.down == 0) {
-						entity.xMod = Physics.prototype.getRandomInteger(1,10);
 						entity[i].yMod = Physics.prototype.getRandomInteger(1,7);
 						entity[i].yMod = Physics.prototype.toggleValue(Math.abs(entity[i].yMod), -Math.abs(entity[i].yMod));
 					}
@@ -242,6 +243,7 @@ function Board(canvas, animation) {
 		}
 	}
 	this.enemies = [];
+	this.enemyEntryCounter = 0;
 	this.obstacles = {
 		top: [],
 		bottom: []
@@ -252,6 +254,7 @@ function Board(canvas, animation) {
 	this.pinnedToBottomCount = 0;
 	
 	this.settings = {
+		enemyEntryPace: 20,
 		maxObstacles: 150,
 		maxPinnedCount: 15,
 		maxYCenterOffsetMod: 30,
@@ -385,8 +388,6 @@ function Game(canvas, d_canvas) {
 	}
 	this.filteredObstacles;
 	this.lag = 0.0;
-	this.enemyEntryCounter = 0;
-	this.enemyEntrySentinal = 150;
 	// main loop
 	this.run = (timestamp) => {
 		// see here for consistent frame rate logic:
@@ -443,10 +444,10 @@ function Game(canvas, d_canvas) {
 		});
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
-		if (this.enemyEntryCounter >= this.enemyEntrySentinal) {
+		if (this.board.enemyEntryCounter >= this.board.settings.enemyEntryPace) {
 			this.board.enemies.push(new Enemy(30, 10));
-			this.enemyEntryCounter = 0;
-		} else this.enemyEntryCounter++;
+			this.board.enemyEntryCounter = 0;
+		} else this.board.enemyEntryCounter++;
 		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
