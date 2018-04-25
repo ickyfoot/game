@@ -61,82 +61,54 @@ function Board(canvas, animation) {
 			// randomize y offset direction
 			if (!pinned) yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
 			
-			if (!!this.travelWithPath) {
-				// board travels vertically with path
+			// path is bounded within the board
 				
-				if (pathCenter <= pathPadding) {
-					// encrouching on top, need to adjust top by the difference between pathPadding and pathCenter
-					this.topAdjust = pathPadding - pathCenter;				
-					topY -= this.topAdjust;
-				}
-				
-				if (pathCenter >= (this.dimensions.height - pathPadding)) {
-					//encroaching on bottom
-					this.topAdjust = pathPadding + pathCenter;
-					topHeight -= this.topAdjust;
-				}
-				
-				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-				var bottomY = Physics.prototype.getRandomInteger(pathCenter + pathPadding, pathCenter + pathPadding + Physics.prototype.getRandomInteger(10,100));
-				
-				// set bottomHeight
-				var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;// increase difficulty as path progresses 
-			
-				// randomize the amount by which y is offset
-				this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-				this.yCenterOffsetMod = yCenterOffsetMod;
-			} else {
-				// path is bounded within the board
-				
-				// ensure top obstacles always have a height of at least this.minObstacleHeight
-				if (!!pinnedToTop) {
-					topHeight = this.minObstacleHeight;
-					this.pinnedToTopCount++;
-				}
-				
-				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-				var bottomY = topHeight + this.obstaclePathMinHeight + Physics.prototype.getRandomInteger(1,10);
-				
-				// ensure y coordinate is always at least this.minObstacleHeight less than board height
-				// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
-				if (!!pinnedToBottom) {
-					bottomY = this.dimensions.height - this.minObstacleHeight;
-					this.pinnedToBottomCount++;
-				}
-
-				// set bottomHeight
-				var bottomHeight = this.dimensions.height - bottomY;
-				
-				// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
-				topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
-					? bottomY - this.obstaclePathMinHeight 
-					: topHeight + Physics.prototype.getRandomInteger(10,100);
-				
-				// unpin path from top or bottom if necessary
-				if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
-					// home
-					// yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-					// work
-					yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-						? this.maxPinnedCount 
-						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-					this.pinnedToTopCount = 0;
-				} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
-					yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
-					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-						? this.maxPinnedCount 
-						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-					this.pinnedToBottomCount = 0;
-				}
-
-				// randomize the amount by which y is offset unless it's been reset because it's pinned
-				this.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-				this.yCenterOffsetMod = yCenterOffsetMod;
+			// ensure top obstacles always have a height of at least this.minObstacleHeight
+			if (!!pinnedToTop) {
+				topHeight = this.minObstacleHeight;
+				this.pinnedToTopCount++;
 			}
 			
-			//this.obstacles.top.push([currentX,topHeight]);
-			//this.obstacles.bottom.push([currentX,bottomY]);
+			// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
+			var bottomY = topHeight + this.obstaclePathMinHeight + Physics.prototype.getRandomInteger(1,10);
+			
+			// ensure y coordinate is always at least this.minObstacleHeight less than board height
+			// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
+			if (!!pinnedToBottom) {
+				bottomY = this.dimensions.height - this.minObstacleHeight;
+				this.pinnedToBottomCount++;
+			}
+
+			// set bottomHeight
+			var bottomHeight = this.dimensions.height - bottomY;
+			
+			// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
+			topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
+				? bottomY - this.obstaclePathMinHeight 
+				: topHeight + Physics.prototype.getRandomInteger(10,100);
+			
+			// unpin path from top or bottom if necessary
+			if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
+				// home
+				yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+				// work
+				// yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+				this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
+					? this.maxPinnedCount 
+					: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+				this.pinnedToTopCount = 0;
+			} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
+				yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
+				this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
+					? this.maxPinnedCount 
+					: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+				this.pinnedToBottomCount = 0;
+			}
+
+			// randomize the amount by which y is offset unless it's been reset because it's pinned
+			this.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
+			this.yCenterOffsetMod = yCenterOffsetMod;
+			
 			
 			this.obstacles.top.push(new Obstacle(
 				currentX, // x
@@ -174,39 +146,33 @@ function Board(canvas, animation) {
 	this.draw = (entity, type, lag) => {
 		var drawType = (typeof type != 'undefined') ? type : entity.drawType;
 		var lag = (typeof lag != 'undefined') ? lag : 1;
+		this.context.lineWidth = 3;
 		switch(drawType) {
 			case 'arc':
 				this.context.beginPath();
 				if (!!entity.collided) {
-					console.log('player collided');
 					this.context.strokeStyle = this.context.fillStyle = 'rgba(200,20,20,1.0)';
 				} else {
 					this.context.strokeStyle = this.context.fillStyle = 'rgba(20,20,20,1.0)';
 				}
 				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
-				this.context.lineWidth = 3;
-				this.context.closePath();
 				this.context.fill();
 			break;
 			case 'lineTo':
+				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
+				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
+				
 				// draw top
 				this.context.beginPath();
 				this.context.moveTo(0, 0);
 				this.context.lineTo(0, entity.top[0].dim.h);
 				for (var i = 0; i < entity.top.length; i++) {
 					entity.top[i].dim.x -= (!!this.animated) ? this.obstacleWidth * lag : 0;
-					if (!!this.travelWithPath) {
-						entity.top[i].dim.y += this.topAdjust
-					}
 					this.context.lineTo(entity.top[i].dim.x, entity.top[i].dim.h);
 				}
 				this.context.lineTo(this.dimensions.width, entity.top[entity.top.length - 1].dim.h);
 				this.context.lineTo(this.dimensions.width, 0);
 				this.context.closePath();
-				
-				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
-				this.context.lineWidth = 3;
-				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
 				this.context.fill();
 				this.context.stroke();
 				
@@ -215,78 +181,49 @@ function Board(canvas, animation) {
 				this.context.moveTo(0, entity.bottom[0].dim.y);
 				for (var i = 0; i < entity.bottom.length; i++) {
 					entity.bottom[i].dim.x -= (!!this.animated) ? this.obstacleWidth : 0;
-					if (!!this.travelWithPath) {
-						entity.bottom[i].dim.y += this.topAdjust
-					}
 					this.context.lineTo(entity.bottom[i].dim.x, entity.bottom[i].dim.y);
 				}
 				this.context.lineTo(this.dimensions.width, entity.bottom[entity.bottom.length - 1].dim.y);
 				this.context.lineTo(this.dimensions.width, this.dimensions.height);
 				this.context.lineTo(0, this.dimensions.height);
 				this.context.closePath();
-				
-				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
-				this.context.lineWidth = 3;
-				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
-				this.context.fill();
-				this.context.stroke();
-			break;
-			
-			// remove
-			case 'path':
-				entity.dim.x -= (!!this.animated) ? entity.dim.w : 0;
-				if (!!this.travelWithPath) {
-					entity.dim.y += this.topAdjust
-					entity.dim.h -= this.topAdjust;
-				}
-				this.context.beginPath();
-				this.context.moveTo(entity.dim.x, entity.dim.y);
-				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
-				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y + entity.dim.h);
-				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
-				this.context.closePath();
-				if (!!entity.collided) {
-					console.log('obstacle collided');
-					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-				} else {
-					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-				}
 				this.context.fill();
 				this.context.stroke();
 			break;
 			case 'rect':
-			console.log(entity);
-				var xMod = Physics.prototype.getRandomInteger(1,3);
-				var yMod = Physics.prototype.getRandomInteger(1,7);
-				xMod = Physics.prototype.toggleValue(xMod, -Math.abs(xMod));
-				
-				entity.dim.x = (!!this.animated) 
-					? entity.dim.x - xMod
-					: this.dimensions.width - entity.dim.w - 10;
-				entity.dim.y = (!!this.animated) 
-					? entity.dim.y - yMod 
-					: this.dimensions.height / 2;
-					
-				if (!!this.travelWithPath) {
-					entity.dim.y += this.topAdjust
-					entity.dim.h -= this.topAdjust;
+				var offScreen = [];
+				for (var i = 0; i < entity.length; i++) {
+					/*if (!!entity.collided) {
+						console.log('obstacle collided');
+						this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+						this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+					} else {*/
+						this.context.fillStyle = 'rgba('+entity[i].rgba.red+',255,'+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
+						this.context.strokeStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
+					/*}*/
+					var xMod = Physics.prototype.getRandomInteger(1,10);
+					var yMod = Physics.prototype.getRandomInteger(1,7);
+					yMod = Physics.prototype.toggleValue(yMod, -Math.abs(yMod));
+					entity[i].dim.x = (!!this.animated && entity[i].status != 'new') 
+						? entity[i].dim.x - xMod
+						: this.dimensions.width - entity[i].dim.w - 10;
+					if (entity[i].dim.x <= 0) offScreen.push(i);
+					entity[i].dim.y = (!!this.animated && entity[i].status != 'new') 
+						? entity[i].dim.y - yMod 
+						: this.dimensions.height / 2 - yMod;
+					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
+					this.context.beginPath();
+					this.context.rect(entity[i].dim.x, entity[i].dim.y, entity[i].dim.w, entity[i].dim.h);
+					this.context.fill();
+					this.context.stroke();
 				}
-				this.context.rect(entity.dim.x, entity.dim.y, entity.dim.w, entity.dim.h);
-				/*if (!!entity.collided) {
-					console.log('obstacle collided');
-					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-				} else {*/
-					this.context.fillStyle = 'rgba('+entity.rgba.red+',255,'+entity.rgba.blue+','+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-				/*}*/
-				this.context.fill();
-				this.context.stroke();
+				if (offScreen.length > 0) {
+					entity.splice(offScreen[0], offScreen.length);
+				}
 			break;
 		}
 	}
+	this.enemies = [];
 	this.maxObstacles = 150;
 	this.obstacleWidth = this.dimensions.width / this.maxObstacles;
 	this.maxPinnedCount = 15;
@@ -310,10 +247,6 @@ function Board(canvas, animation) {
 	
 	// the amount by which the board must shift vertically to follow path
 	this.topAdjust = 0;
-	
-	// specify whether or not board should travel vertically with path
-	// or path should be bounded by the board
-	this.travelWithPath = false;
 	
 	// the amount by which to offset the y value from vertical center
 	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
@@ -340,6 +273,7 @@ function Enemy(w, h) {
 		movement: 'random'
 	}
 	this.drawType = 'rect';
+	this.status = 'new';
 	this.update = (x, y, w, h) => {
 		this.dim.x = x;
 		this.dim.y = y;
@@ -376,7 +310,6 @@ function Game(canvas, d_canvas) {
 	// display board
 	this.board = new Board(canvas, this.animation);
 	
-	this.boardIndex = 1;
 	this.controls = new Controls();	
 	this.inputs = {
 		word: ''
@@ -393,19 +326,17 @@ function Game(canvas, d_canvas) {
 		this.board.createObstacles();
 		
 			//enemy
-		this.board.enemy = new Enemy(30, 10);
+		this.board.enemies.push(new Enemy(30, 10));
 
-		// draw entities
+		// draw entities		
+			// enemies
+		this.board.draw(this.board.enemies, 'rect');
+		
 			// player
 		this.board.draw(this.board.player);
 		
 			// obstacles
 		this.board.draw(this.board.obstacles, 'lineTo');
-		
-			// obstacles
-		this.board.draw(this.board.enemy);
-		
-		//this.board.context.drawImage(this.board.canvas, 0, 0);
 		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
@@ -430,6 +361,8 @@ function Game(canvas, d_canvas) {
 	}
 	this.filteredObstacles;
 	this.lag = 0.0;
+	this.enemyEntryCounter = 0;
+	this.enemyEntrySentinal = 150;
 	// main loop
 	this.run = (timestamp) => {
 		// see here for consistent frame rate logic:
@@ -438,22 +371,21 @@ function Game(canvas, d_canvas) {
 		this.animation.lastFrame = timestamp;
 		this.board.animated = true;
 		if (timestamp < this.animation.lastFrame + this.animation.fpsAsMilliseconds) {
+			// clear board to prepare for next animation state
+			this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 			if (this.status == 'playing' && this.animation.lastFrame !== null) {
-				if (this.boardIndex < 0 || this.boardIndex > 0) {
-					// clear board to prepare for next animation state
-					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
-					this.board.draw(this.board.player);
-					this.board.draw(this.board.enemy);
-					this.board.draw(this.board.obstacles, 'lineTo');
-					this.board.obstacles.top.splice(0,1);
-					this.board.obstacles.bottom.splice(0,1);
-					this.boardIndex = 1;
-				}
+				this.board.draw(this.board.enemies, 'rect');
+				this.board.draw(this.board.player);
+				this.board.draw(this.board.obstacles, 'lineTo');
+				this.board.obstacles.top.splice(0,1);
+				this.board.obstacles.bottom.splice(0,1);
 			} else {
 				if (this.status == 'collision') {
 					this.board.player.collided = true;
 					this.board.draw(this.board.player);
-					this.board.draw(this.board.enemy);
+					this.board.draw(this.board.enemies, 'rect');
+					this.board.animated = false;
+					this.board.draw(this.board.obstacles, 'lineTo');
 					this.stop('over');
 				}
 			}
@@ -487,6 +419,11 @@ function Game(canvas, d_canvas) {
 		});
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
+		if (this.enemyEntryCounter >= this.enemyEntrySentinal) {
+			this.board.enemies.push(new Enemy(30, 10));
+			this.enemyEntryCounter = 0;
+		} else this.enemyEntryCounter++;
+		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
 		this.physics.worker.postMessage({
@@ -510,19 +447,6 @@ function Game(canvas, d_canvas) {
 			this.updateGame();
 		}, this.animation.updateFpsAsMilliseconds);
 	}
-	
-	/*this.advanceGame = () => {
-		var elapsed;
-		var time;
-		do {
-			time = new Date().getTime();
-			elapsed = time - this.animation.lastFrame;
-		} while (elapsed < this.animation.fpsAsMilliseconds);
-		this.animation.frameLength = time - this.animation.lastFrame;
-		this.animation.lastFrame = new Date().getTime();
-		this.updateGame();
-		this.advanceGame();
-	}*/
 }
 
 function Obstacle(x, y, w, h, r, g, b, a) {
