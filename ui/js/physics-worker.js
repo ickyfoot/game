@@ -1,4 +1,11 @@
 function Physics() {
+	this.checkWeapons = (data) => {
+		var firePrimaryWeapon = (!!data.controls.pressedKeys[' ']);
+		return {
+			primary: (!!firePrimaryWeapon)
+		}
+	}
+	
 	this.detectCollision = (player, items) => {
 		var playerTop = player.y - player.radius;
 		var playerBottom = player.y + player.radius;
@@ -37,7 +44,7 @@ function Physics() {
 	}
 	
 	this.getNewDimensions = (data) => {
-		var firePrimaryWeapon, fullSpeed, radiusDelta, newPosition, tempDim, tempRadius, 
+		var fullSpeed, radiusDelta, newPosition, tempDim, tempRadius, 
 		tempX, tempY, throttledSpeed, xDelta, yDelta, xThrottle, yThrottle, zThrottle;
 		// determine if player piece movement or resizing should be throttled
 		fullSpeed = 2;
@@ -45,9 +52,7 @@ function Physics() {
 		xThrottle = (!!data.controls.pressedKeys['x'] || !!data.controls.pressedKeys['X']);
 		yThrottle = (!!data.controls.pressedKeys['c'] || !!data.controls.pressedKeys['C']);
 		zThrottle = (!!data.controls.pressedKeys['z'] || !!data.controls.pressedKeys['Z'] || !!data.controls.pressedKeys['Shift']);
-		firePrimaryWeapon = (!!data.controls.pressedKeys[' ']);
-		console.log(firePrimaryWeapon);
-		if (!!firePrimaryWeapon) console.log('fire!');
+		
 		// set movement and resizing amount
 		xDelta = (!!xThrottle) ? throttledSpeed : fullSpeed;
 		yDelta = (!!yThrottle) ? throttledSpeed : fullSpeed;				
@@ -96,11 +101,11 @@ onmessage = function(e) {
 	metaData = e.data;
 	appData = metaData.appData;
 	action = metaData.action;
-	console.log(appData.obstacles);
 	switch (action) {
 		case 'move player':
-			var dim, collision;
+			var dim, weapons, collision;
 			dim = physics.getNewDimensions(appData);
+			weapons = physics.checkWeapons(appData);
 			collision = (appData.obstacles !== null) ? physics.detectCollision(dim,appData.obstacles) : null;
 			postMessage({
 				action: 'move player',
@@ -108,7 +113,8 @@ onmessage = function(e) {
 					collision: collision,
 					radius: dim.radius,
 					x: dim.x,
-					y: dim.y
+					y: dim.y,
+					weapons: weapons
 				}
 			});
 		break;
