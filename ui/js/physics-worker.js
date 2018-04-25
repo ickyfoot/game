@@ -37,15 +37,17 @@ function Physics() {
 	}
 	
 	this.getNewDimensions = (data) => {
-		var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta,
-			fullSpeed, throttledSpeed, tempRadius, tempX, tempY, tempDim, newPosition;
+		var firePrimaryWeapon, fullSpeed, radiusDelta, newPosition, tempDim, tempRadius, 
+		tempX, tempY, throttledSpeed, xDelta, yDelta, xThrottle, yThrottle, zThrottle;
 		// determine if player piece movement or resizing should be throttled
 		fullSpeed = 2;
 		throttledSpeed = 1;
 		xThrottle = (!!data.controls.pressedKeys['x'] || !!data.controls.pressedKeys['X']);
 		yThrottle = (!!data.controls.pressedKeys['c'] || !!data.controls.pressedKeys['C']);
 		zThrottle = (!!data.controls.pressedKeys['z'] || !!data.controls.pressedKeys['Z'] || !!data.controls.pressedKeys['Shift']);
-		
+		firePrimaryWeapon = (!!data.controls.pressedKeys[' ']);
+		console.log(firePrimaryWeapon);
+		if (!!firePrimaryWeapon) console.log('fire!');
 		// set movement and resizing amount
 		xDelta = (!!xThrottle) ? throttledSpeed : fullSpeed;
 		yDelta = (!!yThrottle) ? throttledSpeed : fullSpeed;				
@@ -94,6 +96,7 @@ onmessage = function(e) {
 	metaData = e.data;
 	appData = metaData.appData;
 	action = metaData.action;
+	console.log(appData.obstacles);
 	switch (action) {
 		case 'move player':
 			var dim, collision;
@@ -102,7 +105,7 @@ onmessage = function(e) {
 			postMessage({
 				action: 'move player',
 				appData: {
-					collision: appData.obstacles[i],
+					collision: collision,
 					radius: dim.radius,
 					x: dim.x,
 					y: dim.y

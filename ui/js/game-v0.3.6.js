@@ -274,7 +274,7 @@ function Controls() {
 	this.pressedKeys = {};
 }
 
-function Enemy(w, h) {
+function Enemy(w, h, m) {
 	this.dim = {
 		h: h,
 		originalDim: {
@@ -282,7 +282,38 @@ function Enemy(w, h) {
 			w: w
 		},
 		w: w,
-		movement: 'random'
+		movement: m
+	}
+	this.yDirCount = {
+		up: 0,
+		down: 0
+	}
+	this.xMod;
+	this.yMod;
+	this.drawType = 'rect';
+	this.status = 'new';
+	this.update = (x, y, w, h) => {
+		this.dim.x = x;
+		this.dim.y = y;
+		this.dim.w = w;
+		this.dim.h = h;
+	}
+	this.rgba = {
+		red: 20,
+		green: 120,
+		blue: 20,
+		opacity: 1.0
+	}
+}
+
+function Projectile(w, h) {
+	this.dim = {
+		h: h,
+		originalDim: {
+			h: h,
+			w: w
+		},
+		w: w
 	}
 	this.yDirCount = {
 		up: 0,
@@ -344,7 +375,7 @@ function Game(canvas, d_canvas) {
 		this.board.createObstacles();
 		
 			//enemy
-		this.board.enemies.push(new Enemy(30, 10));
+		this.board.enemies.push(new Enemy(30, 10, 'random'));
 
 		// draw entities		
 			// enemies
@@ -436,7 +467,7 @@ function Game(canvas, d_canvas) {
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
 		if (this.board.counters.enemyEntryCounter >= this.board.settings.enemyEntryPace) {
-			this.board.enemies.push(new Enemy(30, 10));
+			this.board.enemies.push(new Enemy(30, 10, 'random'));
 			this.board.counters.enemyEntryCounter = 0;
 		} else this.board.counters.enemyEntryCounter++;
 		
@@ -572,7 +603,7 @@ $(document).on('ready',function() {
 	game.init();	
 		
 	ickyfoot.setUpKeyDetection(function(key,type) {
-		game.controls.pressedKeys[key] = (type == 'keydown' || type == 'keypress');
+		game.controls.pressedKeys[key] = (['keydown','keypress'].indexOf(type) > -1);
 		if (type == 'keydown') {
 			game.inputs.word += key
 			if (game.status == 'pending' && game.inputs.word == 'start') {
@@ -584,7 +615,7 @@ $(document).on('ready',function() {
 			}
 		}		
 				
-		if (key == ' ') {
+		if (['p','P'].indexOf(key) > -1) {
 			if (type == 'keydown' || type == 'keypress') {
 				if (game.status != 'over') {
 					game.status = (game.status == 'paused') ? 'playing' : 'paused';
@@ -598,7 +629,7 @@ $(document).on('ready',function() {
 		}
 		
 		if (key == 'Escape') {
-			if (type == 'keydown' || type == 'keypress') {
+			if (['keydown','keypress'].indexOf(type) > -1) {
 				game.stop('over');
 				return;
 			} else return;
