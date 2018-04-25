@@ -3,14 +3,9 @@ function Animation() {
 	this.fpsAsMilliseconds = 1000/this.fps;
 	this.updateFps = 100;
 	this.updateFpsAsMilliseconds = 1000/this.updateFps;
-	this.frameCount = null;
 	this.frameLength = null;
 	this.lastFrame = null;
 	this.main = null;
-	this.nextFrame = null;
-	// how many loops to perform per millisecond in each frame
-	// the higher the number, the faster the player moves
-	this.playerLoopsPerFrameMillisecond = 1;
 }
 
 function Board(canvas, animation) {
@@ -18,6 +13,11 @@ function Board(canvas, animation) {
 	this.animation = animation;
 	this.canvas = canvas;
 	this.context = canvas.getContext('2d');
+	this.counters = {
+		enemyEntryCounter: 0,
+		pinnedToTopCount: 0,
+		pinnedToBottomCount: 0
+	}
 	this.createObstacles = () => {
 		this.obstacleWidth = this.dimensions.width / this.settings.maxObstacles;
 		var obstaclesLength = this.obstacles.top.length;
@@ -66,7 +66,7 @@ function Board(canvas, animation) {
 			// ensure top obstacles always have a height of at least this.settings.minObstacleHeight
 			if (!!pinnedToTop) {
 				topHeight = this.settings.minObstacleHeight;
-				this.pinnedToTopCount++;
+				this.counters.pinnedToTopCount++;
 			}
 			
 			// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
@@ -76,7 +76,7 @@ function Board(canvas, animation) {
 			// thus ensuring that bottom obstacles always have a height of at least this.settings.minObstacleHeight
 			if (!!pinnedToBottom) {
 				bottomY = this.dimensions.height - this.settings.minObstacleHeight;
-				this.pinnedToBottomCount++;
+				this.counters.pinnedToBottomCount++;
 			}
 
 			// set bottomHeight
@@ -88,21 +88,21 @@ function Board(canvas, animation) {
 				: topHeight + Physics.prototype.getRandomInteger(10,100);
 			
 			// unpin path from top or bottom if necessary
-			if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
+			if (this.counters.pinnedToTopCount > this.settings.maxPinnedCount) {
 				// home
 				yCenterOffset = Math.abs(pathPadding + pathCenter + this.settings.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
 				// work
 				// yCenterOffset = Math.abs(pathCenter + this.settings.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-				this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.settings.minPinnedCount) 
+				this.settings.maxPinnedCount = (this.settings.maxPinnedCount <= this.settings.minPinnedCount) 
 					? this.settings.maxPinnedCount 
-					: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-				this.pinnedToTopCount = 0;
-			} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
+					: this.settings.maxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+				this.counters.pinnedToTopCount = 0;
+			} else if (this.counters.pinnedToBottomCount > this.settings.maxPinnedCount) {
 				yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.settings.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
-				this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.settings.minPinnedCount) 
+				this.settings.maxPinnedCount = (this.settings.maxPinnedCount <= this.settings.minPinnedCount) 
 					? this.settings.maxPinnedCount 
-					: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-				this.pinnedToBottomCount = 0;
+					: this.settings.maxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+				this.counters.pinnedToBottomCount = 0;
 			}
 
 			// randomize the amount by which y is offset unless it's been reset because it's pinned
@@ -132,11 +132,6 @@ function Board(canvas, animation) {
 				this.settings.rgba.blue,
 				this.settings.rgba.opacity
 			));
-			//randomize color
-			//if ((i % 3 == 0) || (i % 2 == 0)) {
-			//	if (i % 3 == 0) this.settings.rgba.blue = Physics.prototype.modulateColor(this.settings.rgba.blue);
-			//	else this.settings.rgba.green = Physics.prototype.modulateColor(this.settings.rgba.green);
-			//} else this.settings.rgba.red = Physics.prototype.modulateColor(this.settings.rgba.red);
 			
 			// update the x coordinates for the next pair of obstacles
 			currentX += this.obstacleWidth;
@@ -243,15 +238,12 @@ function Board(canvas, animation) {
 		}
 	}
 	this.enemies = [];
-	this.enemyEntryCounter = 0;
 	this.obstacles = {
 		top: [],
 		bottom: []
 	};
 	
 	this.player = null;
-	this.pinnedToTopCount = 0;
-	this.pinnedToBottomCount = 0;
 	
 	this.settings = {
 		enemyEntryPace: 20,
@@ -273,7 +265,6 @@ function Board(canvas, animation) {
 		yCenterOffsetMod: 10
 	}
 	
-	this.currentMaxPinnedCount = this.settings.maxPinnedCount;
 	this.obstacleWidth = this.dimensions.width / this.settings.maxObstacles;
 }
 
@@ -444,10 +435,10 @@ function Game(canvas, d_canvas) {
 		});
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
-		if (this.board.enemyEntryCounter >= this.board.settings.enemyEntryPace) {
+		if (this.board.counters.enemyEntryCounter >= this.board.settings.enemyEntryPace) {
 			this.board.enemies.push(new Enemy(30, 10));
-			this.board.enemyEntryCounter = 0;
-		} else this.board.enemyEntryCounter++;
+			this.board.counters.enemyEntryCounter = 0;
+		} else this.board.counters.enemyEntryCounter++;
 		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
