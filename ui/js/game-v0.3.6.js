@@ -617,7 +617,7 @@ function Projectile(x, y, provenance) {
 		x: x,
 		y: y,
 		w: 10,
-		h: 5
+		h: 3
 	}
 	this.xMod = 15;
 	this.yMod = 0;
