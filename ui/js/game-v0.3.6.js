@@ -248,7 +248,10 @@ function Board(canvas, animation) {
 					entity[i].dim.y = (!!this.animated && entity[i].status != 'new') 
 						? entity[i].dim.y - entity[i].yMod 
 						: this.dimensions.height / 2 - entity[i].yMod;
-						
+					
+					entity[i].dim.bottom = entity[i].dim.y + entity[i].dim.h;
+					entity[i].dim.right = entity[i].dim.x + entity[i].dim.w;
+					
 					// flag for removal if the entity is offscreen
 					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) offScreen.push(i);
 					
@@ -321,12 +324,12 @@ function Enemy(w, h, m) {
 	this.yMod;
 	this.drawType = 'rect';
 	this.status = 'new';
-	this.update = (x, y, w, h) => {
+	/*this.update = (x, y, w, h) => {
 		this.dim.x = x;
 		this.dim.y = y;
 		this.dim.w = w;
 		this.dim.h = h;
-	}
+	}*/
 	this.rgba = {
 		red: 20,
 		green: 120,
@@ -482,6 +485,10 @@ function Game(canvas, d_canvas) {
 			}
 		}
 		
+		var filteredEnemies = this.board.enemies.filter((el) => {
+			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
+		});
+		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
 		this.physics.worker.postMessage({
@@ -493,6 +500,8 @@ function Game(canvas, d_canvas) {
 					height: this.board.dimensions.height
 				},
 				obstacles: filteredObstacles,
+				enemies: filteredEnemies,
+				projectiles: this.board.projectiles,
 				controls: this.controls
 			}
 		});

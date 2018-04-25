@@ -107,6 +107,11 @@ onmessage = function(e) {
 			dim = physics.getNewDimensions(appData);
 			weapons = physics.checkWeapons(appData);
 			collision = (appData.obstacles !== null) ? physics.detectCollision(dim,appData.obstacles) : null;
+			
+			if (collision === null) {
+				collision = (appData.enemies !== null) ? physics.detectCollision(dim,appData.enemies) : null;
+			}
+			
 			postMessage({
 				action: 'move player',
 				appData: {
