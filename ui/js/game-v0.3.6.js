@@ -186,7 +186,7 @@ function Board(canvas, animation) {
 				this.context.stroke();
 			break;
 			case 'simpleRect':
-				var offScreen = [];
+				var destroy = [];
 				for (var i = 0; i < entity.length; i++) {
 					/*if (!!entity.collided) {
 						console.log('obstacle collided');
@@ -199,8 +199,8 @@ function Board(canvas, animation) {
 					entity[i].dim.x += (this.animated) ? entity[i].xMod : 0;
 					entity[i].dim.y += (this.animated) ? entity[i].yMod : 0;
 					
-					// flag for removal if the entity is offscreen
-					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) offScreen.push(i);
+					// flag for removal if the entity is destroy
+					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) destroy.push(i);
 					
 					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
 					this.context.beginPath();
@@ -209,21 +209,19 @@ function Board(canvas, animation) {
 				}
 				
 				// remove any entities that have moved off the screen.
-				if (offScreen.length > 0)  entity.splice(offScreen[0], offScreen.length);
+				if (destroy.length > 0)  entity.splice(destroy[0], destroy.length);
 			break;
 			case 'rect':
-				var offScreen = [];
+				var destroy = [];
 				for (var i = 0; i < entity.length; i++) {
-					/*if (!!entity.collided) {
-						console.log('obstacle collided');
-						this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-						this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					} else {*/
+					if (!!entity.collided) {
+						 destroy.push(i);
+					} else {
 						this.context.fillStyle = 'rgba('+entity[i].rgba.red+',255,'+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 						this.context.strokeStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
-					/*}*/
+					}
 					
-					entity.xMod = Physics.prototype.getRandomInteger(15,20);
+					entity[i].xMod = Physics.prototype.getRandomInteger(15,20);
 							
 					if (entity[i].yDirCount.up > 20) entity[i].yDirCount.up = 0;
 					else if (entity[i].yDirCount.down > 20) entity[i].yDirCount.down = 0;
@@ -242,7 +240,7 @@ function Board(canvas, animation) {
 					}
 					
 					entity[i].dim.x = (!!this.animated && entity[i].status != 'new') 
-						? entity[i].dim.x - entity.xMod
+						? entity[i].dim.x - entity[i].xMod
 						: this.dimensions.width - entity[i].dim.w - 10;
 					
 					entity[i].dim.y = (!!this.animated && entity[i].status != 'new') 
@@ -252,8 +250,8 @@ function Board(canvas, animation) {
 					entity[i].dim.bottom = entity[i].dim.y + entity[i].dim.h;
 					entity[i].dim.right = entity[i].dim.x + entity[i].dim.w;
 					
-					// flag for removal if the entity is offscreen
-					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) offScreen.push(i);
+					// flag for removal if the entity is destroy
+					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) destroy.push(i);
 					
 					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
 					this.context.beginPath();
@@ -263,7 +261,7 @@ function Board(canvas, animation) {
 				}
 				
 				// remove any entities that have moved off the screen.
-				if (offScreen.length > 0)  entity.splice(offScreen[0], offScreen.length);
+				if (destroy.length > 0)  entity.splice(destroy[0], destroy.length);
 			break;
 		}
 	}
@@ -307,6 +305,7 @@ function Controls() {
 }
 
 function Enemy(w, h, m) {
+	this.collided = false;
 	this.dim = {
 		h: h,
 		originalDim: {
@@ -355,17 +354,19 @@ function Flow() {
 	}
 }
 
-function Game(canvas, d_canvas) {
+function Game(canvas, d_canvas) {	
+	this.advanceGame = () => {
+		return setInterval(() => {
+			//this.animation.frameLength = Date.now() - this.animation.lastFrame;
+			//this.animation.lastFrame = Date.now();
+			this.updateGame();
+		}, this.animation.updateFpsAsMilliseconds);
+	}
 	this.animation = new Animation();
 	// display board
 	this.board = new Board(canvas, this.animation);
 	
 	this.controls = new Controls();	
-	this.inputs = {
-		word: ''
-	}
-	this.physics = new Physics();
-	this.status = 'pending';
 	
 	this.init = () => {
 		// set up entities
@@ -399,18 +400,23 @@ function Game(canvas, d_canvas) {
 				case 'move player':
 					if (appData.collision != null) {
 						this.board.player.collided = true;
-						appData.collision.collided = true;
 						this.status = 'collision';
 					} else {
 						this.board.createObstacles();
+						if (appData.shotDown.length > 0) console.log(appData.shotDown);
 						this.board.player.update(appData.x, appData.y, appData.radius, appData.weapons);
 					}
 				break;
 			}
 		}
 	}
+	this.inputs = {
+		word: ''
+	}
 	this.filteredObstacles;
-	this.lag = 0.0;
+	this.filteredProjectiles;
+	this.lag = 0.0;	
+	this.physics = new Physics();
 	// main loop
 	this.run = (timestamp) => {
 		// see here for consistent frame rate logic:
@@ -441,7 +447,6 @@ function Game(canvas, d_canvas) {
 			}
 		}
 	}
-	
 	this.start = () => {
 		this.animation.lastFrame = performance.now();
 		this.status = 'playing';
@@ -450,6 +455,8 @@ function Game(canvas, d_canvas) {
 		// start game updates
 		this.update = this.advanceGame();
 	}
+	
+	this.status = 'pending';
 	
 	this.stop = (status) => {
 		this.status = status;
@@ -461,19 +468,13 @@ function Game(canvas, d_canvas) {
 	
 	this.update;
 	this.updateGame = () => {
-		var filteredTopObstacles = this.board.obstacles.top.filter((el) => {
-			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
-		});
-		var filteredBottomObstacles = this.board.obstacles.bottom.filter((el) => {
-			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
-		});
-		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
-		
+		// check if enemies should be added and, if so, add them
 		if (this.board.counters.enemyEntryCounter >= this.board.settings.enemyEntryPace) {
 			this.board.enemies.push(new Enemy(30, 10, 'random'));
 			this.board.counters.enemyEntryCounter = 0;
 		} else this.board.counters.enemyEntryCounter++;
 		
+		// check if player is firing and, if so, add projectiles
 		if (!!this.board.player.weapons.primary.firing) {
 			if (this.board.player.weapons.primary.delay == 0) {
 				this.board.projectiles.push(new Projectile(this.board.player.dim.x, this.board.player.dim.y, 'player'));
@@ -485,8 +486,29 @@ function Game(canvas, d_canvas) {
 			}
 		}
 		
-		var filteredEnemies = this.board.enemies.filter((el) => {
+		// find top obstacles close to the player
+		var filteredTopObstacles = this.board.obstacles.top.filter((el) => {
 			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
+		});
+		
+		// find bottom obstacles close to the player
+		var filteredBottomObstacles = this.board.obstacles.bottom.filter((el) => {
+			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
+		});
+		
+		// combine top and bottom obstacles close to the player
+		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+		
+		// find enemies close to the player
+		var filteredEnemies = this.board.enemies.filter((el) => {
+			return (el.dim.x > (this.board.player.dim.x - 15) && el.dim.x < (this.board.player.dim.x + 15));
+		});
+		
+		// find projectiles close to enemies
+		var filteredProjectiles = this.board.projectiles.filter((el) => {
+			return this.board.enemies.filter((innerEl) => {
+				return (el.dim.x > (innerEl.dim.x + 15) && el.dim.x < (innerEl.dim.x + 15));
+			});
 		});
 		
 		// send info to Web Worker to determine if it's time to redraw
@@ -501,18 +523,11 @@ function Game(canvas, d_canvas) {
 				},
 				obstacles: filteredObstacles,
 				enemies: filteredEnemies,
-				projectiles: this.board.projectiles,
+				projectiles: filteredProjectiles,
+				enemyTargets: this.board.enemies,
 				controls: this.controls
 			}
 		});
-	}
-	
-	this.advanceGame = () => {
-		return setInterval(() => {
-			//this.animation.frameLength = Date.now() - this.animation.lastFrame;
-			//this.animation.lastFrame = Date.now();
-			this.updateGame();
-		}, this.animation.updateFpsAsMilliseconds);
 	}
 }
 
@@ -595,6 +610,7 @@ Physics.prototype.setObjectDimensions = (piece) => {
 }
 
 function Player(x, y, r) {
+	this.collided = false;
 	this.dim = {
 		radius: r,
 		originalDim: {
@@ -628,6 +644,8 @@ function Projectile(x, y, provenance) {
 		w: 10,
 		h: 3
 	}
+	this.dim.bottom = this.dim.y + this.dim.h;
+	this.dim.right = this.dim.x + this.dim.w;
 	this.xMod = 15;
 	this.yMod = 0;
 	this.provenance = provenance;

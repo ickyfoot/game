@@ -43,6 +43,30 @@ function Physics() {
 		return edge;
 	}
 	
+	this.detectShotDown = (projectiles, targets) => {
+		var outerShotDown = [];
+		for (var i = 0; i < targets.length; i++) {
+			var shotDown = [];
+			for (var j = 0; j < projectiles.length; j++) {
+				if ((
+						(targets[i].dim.bottom >= projectiles[j].dim.y && targets[i].dim.bottom <= projectiles[j].dim.bottom)
+							||
+						(targets[i].dim.top >= projectiles[j].dim.y && targets[i].dim.top <= projectiles[j].dim.bottom)
+					)
+						&&
+					(
+						(targets[i].dim.right >= projectiles[j].dim.x && targets[i].dim.right <= projectiles[j].dim.right)
+							||
+						(targets[i].dim.left >= projectiles[j].dim.x && targets[i].dim.left <= projectiles[j].dim.right)
+					)) {
+					shotDown.push(j);
+				}
+			}
+			outerShotDown.concat(shotDown);
+		}
+		return outerShotDown;
+	}
+	
 	this.getNewDimensions = (data) => {
 		var fullSpeed, radiusDelta, newPosition, tempDim, tempRadius, 
 		tempX, tempY, throttledSpeed, xDelta, yDelta, xThrottle, yThrottle, zThrottle;
@@ -107,9 +131,14 @@ onmessage = function(e) {
 			dim = physics.getNewDimensions(appData);
 			weapons = physics.checkWeapons(appData);
 			collision = (appData.obstacles !== null) ? physics.detectCollision(dim,appData.obstacles) : null;
-			
+			shotDown = (appData.projectiles !== null) ? physics.detectShotDown(appData.projectiles, appData.enemyTargets) : null;
 			if (collision === null) {
 				collision = (appData.enemies !== null) ? physics.detectCollision(dim,appData.enemies) : null;
+			}
+			if (shotDown !== null) {
+				for (var i = 0; i < shotDown.length; i++) {
+					shotDown[i].collided = true;
+				}
 			}
 			
 			postMessage({
@@ -117,6 +146,7 @@ onmessage = function(e) {
 				appData: {
 					collision: collision,
 					radius: dim.radius,
+					shotDown: shotDown,
 					x: dim.x,
 					y: dim.y,
 					weapons: weapons
