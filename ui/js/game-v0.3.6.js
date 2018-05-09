@@ -196,9 +196,6 @@ function Board(canvas, animation) {
 						this.context.fillStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 					/*}*/
 					
-					entity[i].dim.x += (this.animated) ? entity[i].xMod : 0;
-					entity[i].dim.y += (this.animated) ? entity[i].yMod : 0;
-					
 					// flag for removal if the entity is destroy
 					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) destroy.push(i);
 					
@@ -403,7 +400,11 @@ function Game(canvas, d_canvas) {
 						this.status = 'collision';
 					} else {
 						this.board.createObstacles();
-						if (appData.shotDown.length > 0) console.log(appData.shotDown);
+						if (appData.shotDown.length > 0) {
+							console.log(appData.shotDown);
+							console.log(this.board.enemies);
+							this.status = 'collision';
+						}
 						this.board.player.update(appData.x, appData.y, appData.radius, appData.weapons);
 					}
 				break;
@@ -504,12 +505,23 @@ function Game(canvas, d_canvas) {
 			return (el.dim.x > (this.board.player.dim.x - 15) && el.dim.x < (this.board.player.dim.x + 15));
 		});
 		
-		// find projectiles close to enemies
-		var filteredProjectiles = this.board.projectiles.filter((el) => {
-			return this.board.enemies.filter((innerEl) => {
-				return (el.dim.x > (innerEl.dim.x + 15) && el.dim.x < (innerEl.dim.x + 15));
+		var filteredProjectiles = [];
+		for (var i = 0; i < this.board.projectiles.length; i++) {
+			var dimX = (this.board.animated) 
+				? this.board.projectiles[i].dim.x + this.board.projectiles[i].xMod
+				: this.board.projectiles[i].dim.x;
+			var dimY =  (this.board.animated) 
+				? this.board.projectiles[i].dim.y + this.board.projectiles[i].yMod
+				: this.board.projectiles[i].dim.y;
+			
+			var projectile = this.board.projectiles[i];
+			
+			Projectile.prototype.update(projectile, dimX, dimY);
+			var interimProjectiles = this.board.projectiles.filter((el) => {
+				return (projectile.dim.x > (el.dim.x - 15) && projectile.dim.x < (el.dim.x + 15));
 			});
-		});
+			filteredProjectiles = filteredProjectiles.concat(interimProjectiles);
+		}
 		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
@@ -637,7 +649,7 @@ function Player(x, y, r) {
 	}
 }
 
-function Projectile(x, y, provenance) {
+function Projectile(x, y, source) {
 	this.dim = {
 		x: x,
 		y: y,
@@ -648,7 +660,7 @@ function Projectile(x, y, provenance) {
 	this.dim.right = this.dim.x + this.dim.w;
 	this.xMod = 15;
 	this.yMod = 0;
-	this.provenance = provenance;
+	this.source = source;
 	this.drawType = 'simpleRect';
 	this.status = 'new';
 	this.rgba = {
@@ -657,6 +669,12 @@ function Projectile(x, y, provenance) {
 		blue: 120,
 		opacity: 1.0
 	}
+}
+Projectile.prototype.update = (projectile, x, y) => {
+	projectile.dim.x = x;
+	projectile.dim.y = y;
+	projectile.dim.right = projectile.dim.x + projectile.dim.w;
+	projectile.dim.bottom = projectile.dim.y + projectile.dim.h;
 }
 
 $(document).on('ready',function() {

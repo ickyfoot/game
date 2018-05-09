@@ -48,21 +48,23 @@ function Physics() {
 		for (var i = 0; i < targets.length; i++) {
 			var shotDown = [];
 			for (var j = 0; j < projectiles.length; j++) {
-				if ((
-						(targets[i].dim.bottom >= projectiles[j].dim.y && targets[i].dim.bottom <= projectiles[j].dim.bottom)
-							||
-						(targets[i].dim.top >= projectiles[j].dim.y && targets[i].dim.top <= projectiles[j].dim.bottom)
-					)
-						&&
-					(
-						(targets[i].dim.right >= projectiles[j].dim.x && targets[i].dim.right <= projectiles[j].dim.right)
-							||
-						(targets[i].dim.left >= projectiles[j].dim.x && targets[i].dim.left <= projectiles[j].dim.right)
-					)) {
-					shotDown.push(j);
+				if (
+						(
+							(projectiles[j].dim.bottom >= targets[i].dim.y && projectiles[j].dim.bottom <= targets[i].dim.bottom)
+								||
+							(projectiles[j].dim.top >= targets[i].dim.y && projectiles[j].dim.top <= targets[i].dim.bottom)
+						)
+							&&
+						(
+							(projectiles[j].dim.right >= targets[i].dim.x && projectiles[j].dim.right <= targets[i].dim.right)
+								||
+							(projectiles[j].dim.left >= targets[i].dim.x && projectiles[j].dim.left <= targets[i].dim.right)
+						)
+					) {
+					shotDown.push(projectiles[j]);
 				}
 			}
-			outerShotDown.concat(shotDown);
+			outerShotDown = outerShotDown.concat(shotDown);
 		}
 		return outerShotDown;
 	}
@@ -140,7 +142,7 @@ onmessage = function(e) {
 					shotDown[i].collided = true;
 				}
 			}
-			
+
 			postMessage({
 				action: 'move player',
 				appData: {
