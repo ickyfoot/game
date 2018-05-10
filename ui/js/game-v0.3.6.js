@@ -188,16 +188,15 @@ function Board(canvas, animation) {
 			case 'simpleRect':
 				var destroy = [];
 				for (var i = 0; i < entity.length; i++) {
-					/*if (!!entity.collided) {
-						console.log('obstacle collided');
+					/*if (!!entity[i].collided) {
 						this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 						this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 					} else {*/
 						this.context.fillStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 					/*}*/
 					
-					// flag for removal if the entity is destroy
-					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) destroy.push(i);
+					// flag for removal if the entity is destroyed or offscreen
+					if (!!entity[i].destroyed || (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.right >= this.dimensions.width || entity[i].dim.bottom >= this.dimensions.height)) destroy.push(i);
 					
 					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
 					this.context.beginPath();
@@ -211,8 +210,12 @@ function Board(canvas, animation) {
 			case 'rect':
 				var destroy = [];
 				for (var i = 0; i < entity.length; i++) {
-					if (!!entity.collided) {
-						 destroy.push(i);
+					if (!!entity[i].collided) {
+						destroy.push(i);
+					} else if (!!entity[i].destroyed) {
+						this.context.strokeStyle = 'rgba(200,20,20,1.0)';
+						this.context.fillStyle = 'rgba(255,100,20,1.0)';
+						destroy.push(i);
 					} else {
 						this.context.fillStyle = 'rgba('+entity[i].rgba.red+',255,'+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 						this.context.strokeStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
@@ -291,18 +294,21 @@ function Board(canvas, animation) {
 		// the amount by which yCenterOffset varies from one obstacle to the next
 		yCenterOffsetMod: 10
 	}
-	
 	this.obstacleWidth = this.dimensions.width / this.settings.maxObstacles;
+	
+	this.id = Util.prototype.getGuid();
 }
 
-function Controls() {
+function Control() {
 	this.keywords = ['start'];
 	this.arrowKeys = ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'];
 	this.pressedKeys = {};
+	this.id = Util.prototype.getGuid();
 }
 
 function Enemy(w, h, m) {
 	this.collided = false;
+	this.destroyed = false;
 	this.dim = {
 		h: h,
 		originalDim: {
@@ -332,6 +338,7 @@ function Enemy(w, h, m) {
 		blue: 20,
 		opacity: 1.0
 	}
+	this.id = Util.prototype.getGuid();
 }
 
 function Flow() {
@@ -349,6 +356,7 @@ function Flow() {
 	
 	this.stop = () => {
 	}
+	this.id = Util.prototype.getGuid();
 }
 
 function Game(canvas, d_canvas) {	
@@ -363,7 +371,7 @@ function Game(canvas, d_canvas) {
 	// display board
 	this.board = new Board(canvas, this.animation);
 	
-	this.controls = new Controls();	
+	this.control = new Control();	
 	
 	this.init = () => {
 		// set up entities
@@ -388,7 +396,7 @@ function Game(canvas, d_canvas) {
 		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
-			var action, appData, data;
+			var action, appData, data, destroyedEnemies;
 			data = e.data;
 			action = data.action;
 			appData = data.appData;
@@ -401,9 +409,19 @@ function Game(canvas, d_canvas) {
 					} else {
 						this.board.createObstacles();
 						if (appData.shotDown.length > 0) {
-							console.log(appData.shotDown);
-							console.log(this.board.enemies);
-							this.status = 'collision';
+							destroyedEnemies = [];
+							for (var i = 0; i < appData.shotDown.length; i++) {
+								var enemyId = appData.shotDown[i];
+								destroyed = this.board.enemies.filter(function(el) {
+									return el.id == enemyId;
+								});
+								destroyedEnemies = destroyedEnemies.concat(destroyed);
+							}
+							if (destroyedEnemies.length > 0) {
+								for (var i = 0; i < destroyedEnemies.length; i++) {
+									destroyedEnemies[i].destroyed = true;
+								}
+							}
 						}
 						this.board.player.update(appData.x, appData.y, appData.radius, appData.weapons);
 					}
@@ -537,10 +555,11 @@ function Game(canvas, d_canvas) {
 				enemies: filteredEnemies,
 				projectiles: filteredProjectiles,
 				enemyTargets: this.board.enemies,
-				controls: this.controls
+				control: this.control
 			}
 		});
 	}
+	this.id = Util.prototype.getGuid();
 }
 
 function Obstacle(x, y, w, h, r, g, b, a) {
@@ -559,6 +578,7 @@ function Obstacle(x, y, w, h, r, g, b, a) {
 		blue: b,
 		opacity: a
 	};
+	this.id = Util.prototype.getGuid();
 }
 
 function Physics() {
@@ -647,6 +667,7 @@ function Player(x, y, r) {
 			delay: 0
 		}
 	}
+	this.id = Util.prototype.getGuid();
 }
 
 function Projectile(x, y, source) {
@@ -669,6 +690,7 @@ function Projectile(x, y, source) {
 		blue: 120,
 		opacity: 1.0
 	}
+	this.id = Util.prototype.getGuid();
 }
 Projectile.prototype.update = (projectile, x, y) => {
 	projectile.dim.x = x;
@@ -677,6 +699,20 @@ Projectile.prototype.update = (projectile, x, y) => {
 	projectile.dim.bottom = projectile.dim.y + projectile.dim.h;
 }
 
+function Util() {}
+Util.prototype.getGuid = () => {
+	// guid and s4 logic courtesy of https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+	var guid = () => {
+		return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+			s4() + '-' + s4() + s4() + s4();
+	}
+	var s4 = () => {
+		return Math.floor((1 + Math.random()) * 0x10000)
+		.toString(16)
+		.substring(1);
+	}
+	return guid();
+}
 $(document).on('ready',function() {
 	var canvas = document.getElementById('game-board');
 	$(canvas).attr('width', $('#container').width());
@@ -687,15 +723,15 @@ $(document).on('ready',function() {
 	game.init();	
 		
 	ickyfoot.setUpKeyDetection(function(key,type) {
-		game.controls.pressedKeys[key] = (['keydown','keypress'].indexOf(type) > -1);
+		game.control.pressedKeys[key] = (['keydown','keypress'].indexOf(type) > -1);
 		if (type == 'keydown') {
 			game.inputs.word += key
 			if (game.status == 'pending' && game.inputs.word == 'start') {
 				game.start();
 				game.inputs.word = '';
 			} else {
-				for (var i = 0; i < game.controls.keywords.length; i++)
-					game.inputs.word = (game.controls.keywords[i].indexOf(game.inputs.word) == -1) ? '' : game.inputs.word;
+				for (var i = 0; i < game.control.keywords.length; i++)
+					game.inputs.word = (game.control.keywords[i].indexOf(game.inputs.word) == -1) ? '' : game.inputs.word;
 			}
 		}		
 				
