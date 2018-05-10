@@ -211,7 +211,7 @@ function Board(canvas, animation) {
 				var destroy = [];
 				for (var i = 0; i < entity.length; i++) {
 					if (!!entity[i].collided) {
-						destroy.push(i);
+						// affix to obstacle
 					} else if (!!entity[i].destroyed) {
 						this.context.strokeStyle = 'rgba(200,20,20,1.0)';
 						this.context.fillStyle = 'rgba(255,100,20,1.0)';
@@ -220,40 +220,6 @@ function Board(canvas, animation) {
 						this.context.fillStyle = 'rgba('+entity[i].rgba.red+',255,'+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 						this.context.strokeStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
 					}
-					
-					entity[i].xMod = Physics.prototype.getRandomInteger(15,20);
-							
-					if (entity[i].yDirCount.up > 20) entity[i].yDirCount.up = 0;
-					else if (entity[i].yDirCount.down > 20) entity[i].yDirCount.down = 0;
-					
-					if (entity[i].yDirCount.up == 0 && entity[i].yDirCount.down == 0) {
-						entity[i].yMod = Physics.prototype.getRandomInteger(1,7);
-						entity[i].yMod = Physics.prototype.toggleValue(Math.abs(entity[i].yMod), -Math.abs(entity[i].yMod));
-					}
-					
-					if (entity[i].yMod > 0) {
-						entity[i].yMod = Math.abs(Physics.prototype.getRandomInteger(1,7));
-						entity[i].yDirCount.up++; 
-					} else if (entity[i].yMod < 0) {
-						entity[i].yMod = -Math.abs(Physics.prototype.getRandomInteger(1,7));
-						entity[i].yDirCount.down++;
-					}
-					
-					entity[i].dim.x = (!!this.animated && entity[i].status != 'new') 
-						? entity[i].dim.x - entity[i].xMod
-						: this.dimensions.width - entity[i].dim.w - 10;
-					
-					entity[i].dim.y = (!!this.animated && entity[i].status != 'new') 
-						? entity[i].dim.y - entity[i].yMod 
-						: this.dimensions.height / 2 - entity[i].yMod;
-					
-					entity[i].dim.bottom = entity[i].dim.y + entity[i].dim.h;
-					entity[i].dim.right = entity[i].dim.x + entity[i].dim.w;
-					
-					// flag for removal if the entity is destroy
-					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) destroy.push(i);
-					
-					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
 					this.context.beginPath();
 					this.context.rect(entity[i].dim.x, entity[i].dim.y, entity[i].dim.w, entity[i].dim.h);
 					this.context.fill();
@@ -326,12 +292,6 @@ function Enemy(w, h, m) {
 	this.yMod;
 	this.drawType = 'rect';
 	this.status = 'new';
-	/*this.update = (x, y, w, h) => {
-		this.dim.x = x;
-		this.dim.y = y;
-		this.dim.w = w;
-		this.dim.h = h;
-	}*/
 	this.rgba = {
 		red: 20,
 		green: 120,
@@ -339,6 +299,42 @@ function Enemy(w, h, m) {
 		opacity: 1.0
 	}
 	this.id = Util.prototype.getGuid();
+}
+
+Enemy.prototype.update = (enemy, board) => {
+	enemy.xMod = Physics.prototype.getRandomInteger(15,20);
+			
+	if (enemy.yDirCount.up > 20) enemy.yDirCount.up = 0;
+	else if (enemy.yDirCount.down > 20) enemy.yDirCount.down = 0;
+	
+	if (enemy.yDirCount.up == 0 && enemy.yDirCount.down == 0) {
+		enemy.yMod = Physics.prototype.getRandomInteger(1,7);
+		enemy.yMod = Physics.prototype.toggleValue(Math.abs(enemy.yMod), -Math.abs(enemy.yMod));
+	}
+	
+	if (enemy.yMod > 0) {
+		enemy.yMod = Math.abs(Physics.prototype.getRandomInteger(1,7));
+		enemy.yDirCount.up++; 
+	} else if (enemy.yMod < 0) {
+		enemy.yMod = -Math.abs(Physics.prototype.getRandomInteger(1,7));
+		enemy.yDirCount.down++;
+	}
+	
+	enemy.dim.x = (enemy.status != 'new') 
+		? enemy.dim.x - enemy.xMod
+		: board.dimensions.width - enemy.dim.w - 10;
+	
+	enemy.dim.y = (enemy.status != 'new') 
+		? enemy.dim.y - enemy.yMod 
+		: board.dimensions.height / 2 - enemy.yMod;
+	
+	enemy.dim.bottom = enemy.dim.y + enemy.dim.h;
+	enemy.dim.right = enemy.dim.x + enemy.dim.w;
+	
+	// flag for removal if the entity is destroy
+	if (enemy.dim.x <= 0 || enemy.dim.y <= 0 || enemy.dim.y >= board.dimensions.height) destroy.push(i);
+	
+	enemy.status = (enemy.status == 'new') ? 'established' : enemy.status;
 }
 
 function Flow() {
@@ -518,24 +514,21 @@ function Game(canvas, d_canvas) {
 		// combine top and bottom obstacles close to the player
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
-		// find enemies close to the player
+		var filteredProjectiles = [];
+		
+		for (var i = 0; i < this.board.enemies.length; i++) {			
+			var enemy = this.board.enemies[i];			
+			Enemy.prototype.update(enemy, this.board);
+			// find enemies close to the player
+		}
 		var filteredEnemies = this.board.enemies.filter((el) => {
 			return (el.dim.x > (this.board.player.dim.x - 15) && el.dim.x < (this.board.player.dim.x + 15));
 		});
 		
-		var filteredProjectiles = [];
-		for (var i = 0; i < this.board.projectiles.length; i++) {
-			var dimX = (this.board.animated) 
-				? this.board.projectiles[i].dim.x + this.board.projectiles[i].xMod
-				: this.board.projectiles[i].dim.x;
-			var dimY =  (this.board.animated) 
-				? this.board.projectiles[i].dim.y + this.board.projectiles[i].yMod
-				: this.board.projectiles[i].dim.y;
-			
-			var projectile = this.board.projectiles[i];
-			
-			Projectile.prototype.update(projectile, dimX, dimY);
-			var interimProjectiles = this.board.projectiles.filter((el) => {
+		for (var i = 0; i < this.board.projectiles.length; i++) {			
+			var projectile = this.board.projectiles[i];			
+			Projectile.prototype.update(projectile);
+			var interimProjectiles = this.board.enemies.filter((el) => {
 				return (projectile.dim.x > (el.dim.x - 15) && projectile.dim.x < (el.dim.x + 15));
 			});
 			filteredProjectiles = filteredProjectiles.concat(interimProjectiles);
@@ -692,9 +685,9 @@ function Projectile(x, y, source) {
 	}
 	this.id = Util.prototype.getGuid();
 }
-Projectile.prototype.update = (projectile, x, y) => {
-	projectile.dim.x = x;
-	projectile.dim.y = y;
+Projectile.prototype.update = (projectile) => {
+	projectile.dim.x = projectile.dim.x + projectile.xMod;
+	projectile.dim.y = projectile.dim.y + projectile.yMod;
 	projectile.dim.right = projectile.dim.x + projectile.dim.w;
 	projectile.dim.bottom = projectile.dim.y + projectile.dim.h;
 }
