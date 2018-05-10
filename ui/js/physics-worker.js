@@ -1,4 +1,11 @@
 function Physics() {
+	this.checkWeapons = (data) => {
+		var firePrimaryWeapon = (!!data.control.pressedKeys[' ']);
+		return {
+			primary: (!!firePrimaryWeapon)
+		}
+	}
+	
 	this.detectCollision = (player, items) => {
 		var playerTop = player.y - player.radius;
 		var playerBottom = player.y + player.radius;
@@ -36,15 +43,41 @@ function Physics() {
 		return edge;
 	}
 	
+	this.detectShotDown = (projectiles, targets) => {
+		var outerShotDown = [];
+		for (var i = 0; i < targets.length; i++) {
+			var shotDown = [];
+			for (var j = 0; j < projectiles.length; j++) {
+				if (
+						(
+							(projectiles[j].dim.bottom >= targets[i].dim.y && projectiles[j].dim.bottom <= targets[i].dim.bottom)
+								||
+							(projectiles[j].dim.top >= targets[i].dim.y && projectiles[j].dim.top <= targets[i].dim.bottom)
+						)
+							&&
+						(
+							(projectiles[j].dim.right >= targets[i].dim.x && projectiles[j].dim.right <= targets[i].dim.right)
+								||
+							(projectiles[j].dim.left >= targets[i].dim.x && projectiles[j].dim.left <= targets[i].dim.right)
+						)
+					) {
+					shotDown.push(targets[i].id);
+				}
+			}
+			outerShotDown = outerShotDown.concat(shotDown);
+		}
+		return outerShotDown;
+	}
+	
 	this.getNewDimensions = (data) => {
-		var xThrottle, yThrottle, zThrottle, xDelta, yDelta, radiusDelta,
-			fullSpeed, throttledSpeed, tempRadius, tempX, tempY, tempDim, newPosition;
+		var fullSpeed, radiusDelta, newPosition, tempDim, tempRadius, 
+		tempX, tempY, throttledSpeed, xDelta, yDelta, xThrottle, yThrottle, zThrottle;
 		// determine if player piece movement or resizing should be throttled
 		fullSpeed = 2;
 		throttledSpeed = 1;
-		xThrottle = (!!data.controls.pressedKeys['x'] || !!data.controls.pressedKeys['X']);
-		yThrottle = (!!data.controls.pressedKeys['c'] || !!data.controls.pressedKeys['C']);
-		zThrottle = (!!data.controls.pressedKeys['z'] || !!data.controls.pressedKeys['Z'] || !!data.controls.pressedKeys['Shift']);
+		xThrottle = (!!data.control.pressedKeys['x'] || !!data.control.pressedKeys['X']);
+		yThrottle = (!!data.control.pressedKeys['c'] || !!data.control.pressedKeys['C']);
+		zThrottle = (!!data.control.pressedKeys['z'] || !!data.control.pressedKeys['Z'] || !!data.control.pressedKeys['Shift']);
 		
 		// set movement and resizing amount
 		xDelta = (!!xThrottle) ? throttledSpeed : fullSpeed;
@@ -58,25 +91,25 @@ function Physics() {
 		}
 		
 		// resize player piece
-		if (!!data.controls.pressedKeys['Control'] &&
-				(!!data.controls.pressedKeys['ArrowLeft'] || !!data.controls.pressedKeys['ArrowRight']
-				|| !!data.controls.pressedKeys['ArrowUp'] || !!data.controls.pressedKeys['ArrowDown'])) {
+		if (!!data.control.pressedKeys['Control'] &&
+				(!!data.control.pressedKeys['ArrowLeft'] || !!data.control.pressedKeys['ArrowRight']
+				|| !!data.control.pressedKeys['ArrowUp'] || !!data.control.pressedKeys['ArrowDown'])) {
 			// reset player piece size
 			tempDim.radius = data.player.originalDim.radius;
 		} else {
 			// resize player piece
-			if (!!data.controls.pressedKeys['g']) {
+			if (!!data.control.pressedKeys['g']) {
 				tempDim.radius = data.player.radius + radiusDelta;
-			} else if (!!data.controls.pressedKeys['s'] && data.player.radius > 0) {
+			} else if (!!data.control.pressedKeys['s'] && data.player.radius > 0) {
 				tempDim.radius = (data.player.radius - radiusDelta <= 0) 
 					? 0
 					: data.player.radius - radiusDelta;
 			} else {
 				// move player piece
-				if (!!data.controls.pressedKeys['ArrowUp']) tempDim.y = data.player.y - yDelta;					
-				if (!!data.controls.pressedKeys['ArrowRight']) tempDim.x = data.player.x + xDelta;					
-				if (!!data.controls.pressedKeys['ArrowDown']) tempDim.y = data.player.y + yDelta;					
-				if (!!data.controls.pressedKeys['ArrowLeft']) tempDim.x = data.player.x - xDelta;
+				if (!!data.control.pressedKeys['ArrowUp']) tempDim.y = data.player.y - yDelta;					
+				if (!!data.control.pressedKeys['ArrowRight']) tempDim.x = data.player.x + xDelta;					
+				if (!!data.control.pressedKeys['ArrowDown']) tempDim.y = data.player.y + yDelta;					
+				if (!!data.control.pressedKeys['ArrowLeft']) tempDim.x = data.player.x - xDelta;
 			}
 		}
 		
@@ -96,16 +129,29 @@ onmessage = function(e) {
 	action = metaData.action;
 	switch (action) {
 		case 'move player':
-			var dim, collision;
+			var dim, weapons, collision;
 			dim = physics.getNewDimensions(appData);
+			weapons = physics.checkWeapons(appData);
 			collision = (appData.obstacles !== null) ? physics.detectCollision(dim,appData.obstacles) : null;
+			shotDown = (appData.projectiles !== null) ? physics.detectShotDown(appData.projectiles, appData.enemyTargets) : null;
+			if (collision === null) {
+				collision = (appData.enemies !== null) ? physics.detectCollision(dim,appData.enemies) : null;
+			}
+			/*if (shotDown !== null) {
+				for (var i = 0; i < shotDown.length; i++) {
+					shotDown[i].collided = true;
+				}
+			}*/
+
 			postMessage({
 				action: 'move player',
 				appData: {
-					collision: appData.obstacles[i],
+					collision: collision,
 					radius: dim.radius,
+					shotDown: shotDown,
 					x: dim.x,
-					y: dim.y
+					y: dim.y,
+					weapons: weapons
 				}
 			});
 		break;

@@ -3,14 +3,9 @@ function Animation() {
 	this.fpsAsMilliseconds = 1000/this.fps;
 	this.updateFps = 100;
 	this.updateFpsAsMilliseconds = 1000/this.updateFps;
-	this.frameCount = null;
 	this.frameLength = null;
 	this.lastFrame = null;
 	this.main = null;
-	this.nextFrame = null;
-	// how many loops to perform per millisecond in each frame
-	// the higher the number, the faster the player moves
-	this.playerLoopsPerFrameMillisecond = 1;
 }
 
 function Board(canvas, animation) {
@@ -18,25 +13,30 @@ function Board(canvas, animation) {
 	this.animation = animation;
 	this.canvas = canvas;
 	this.context = canvas.getContext('2d');
+	this.counters = {
+		enemyEntryCounter: 0,
+		pinnedToTopCount: 0,
+		pinnedToBottomCount: 0
+	}
 	this.createObstacles = () => {
-		this.obstacleWidth = this.dimensions.width / this.maxObstacles;
+		this.obstacleWidth = this.dimensions.width / this.settings.maxObstacles;
 		var obstaclesLength = this.obstacles.top.length;
 		var availableSpace = this.dimensions.width - (obstaclesLength * this.obstacleWidth);
 		var availableSpaces = Math.ceil(availableSpace / this.obstacleWidth);
 
-		var pathPadding = this.obstaclePathMinHeight / 2;
+		var pathPadding = this.settings.obstaclePathMinHeight / 2;
 		// divide obstacles array length by 2 because obstacles come in pairs
 		var currentX = (obstaclesLength * this.obstacleWidth);
-		var minPathCenter = this.minObstacleHeight + pathPadding;
-		var maxPathCenter = this.dimensions.height - this.minObstacleHeight - pathPadding;
+		var minPathCenter = this.settings.minObstacleHeight + pathPadding;
+		var maxPathCenter = this.dimensions.height - this.settings.minObstacleHeight - pathPadding;
 		// add availableSpaces if this is a strictly lineTo draw
 		// this is necessary because availableSpaces is calculated to determine how
 		// many rectangles of a given width can fit in the full board width
 		// but this leaves a gap at the end when doing pure line-to;
 		availableSpaces += 2; // 5 prevents flatlining at work, 2 prevents flatlining at home.
 		for (var i = 0; i < availableSpaces; i++) {
-			var yCenterOffset = this.yCenterOffset;
-			var yCenterOffsetMod = this.yCenterOffsetMod;
+			var yCenterOffset = this.settings.yCenterOffset;
+			var yCenterOffsetMod = this.settings.yCenterOffsetMod;
 			var topY = 0;
 			var pathCenter = (this.dimensions.height / 2) - yCenterOffset;
 			var pinnedToTop = pathCenter < minPathCenter;
@@ -51,102 +51,74 @@ function Board(canvas, animation) {
 			//yCenterOffsetMod += (yCenterOffsetMod < 0) ? i : -i;
 				
 			// ensure it doesn't get too difficult
-			yCenterOffsetMod -= (yCenterOffsetMod > this.maxYCenterOffsetMod) 
+			yCenterOffsetMod -= (yCenterOffsetMod > this.settings.maxYCenterOffsetMod) 
 				? 10 
 				: 0;
-			yCenterOffsetMod += (yCenterOffsetMod < -this.maxYCenterOffsetMod) 
+			yCenterOffsetMod += (yCenterOffsetMod < -this.settings.maxYCenterOffsetMod) 
 				? 10
 				: 0;
 			
 			// randomize y offset direction
 			if (!pinned) yCenterOffsetMod = Physics.prototype.toggleValue(yCenterOffsetMod,-yCenterOffsetMod);
 			
-			if (!!this.travelWithPath) {
-				// board travels vertically with path
+			// path is bounded within the board
 				
-				if (pathCenter <= pathPadding) {
-					// encrouching on top, need to adjust top by the difference between pathPadding and pathCenter
-					this.topAdjust = pathPadding - pathCenter;				
-					topY -= this.topAdjust;
-				}
-				
-				if (pathCenter >= (this.dimensions.height - pathPadding)) {
-					//encroaching on bottom
-					this.topAdjust = pathPadding + pathCenter;
-					topHeight -= this.topAdjust;
-				}
-				
-				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-				var bottomY = Physics.prototype.getRandomInteger(pathCenter + pathPadding, pathCenter + pathPadding + Physics.prototype.getRandomInteger(10,100));
-				
-				// set bottomHeight
-				var bottomHeight = (bottomHeight > this.dimensions.height) ? 0 : this.dimensions.height - bottomY;// increase difficulty as path progresses 
-			
-				// randomize the amount by which y is offset
-				this.yCenterOffset = Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-				this.yCenterOffsetMod = yCenterOffsetMod;
-			} else {
-				// path is bounded within the board
-				
-				// ensure top obstacles always have a height of at least this.minObstacleHeight
-				if (!!pinnedToTop) {
-					topHeight = this.minObstacleHeight;
-					this.pinnedToTopCount++;
-				}
-				
-				// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
-				var bottomY = topHeight + this.obstaclePathMinHeight + Physics.prototype.getRandomInteger(1,10);
-				
-				// ensure y coordinate is always at least this.minObstacleHeight less than board height
-				// thus ensuring that bottom obstacles always have a height of at least this.minObstacleHeight
-				if (!!pinnedToBottom) {
-					bottomY = this.dimensions.height - this.minObstacleHeight;
-					this.pinnedToBottomCount++;
-				}
-
-				// set bottomHeight
-				var bottomHeight = this.dimensions.height - bottomY;
-				
-				// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
-				topHeight = (bottomY == this.dimensions.height - this.minObstacleHeight) 
-					? bottomY - this.obstaclePathMinHeight 
-					: topHeight + Physics.prototype.getRandomInteger(10,100);
-				
-				// unpin path from top or bottom if necessary
-				if (this.pinnedToTopCount > this.currentMaxPinnedCount) {
-					// home
-					// yCenterOffset = Math.abs(pathPadding + pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-					// work
-					yCenterOffset = Math.abs(pathCenter + this.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
-					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-						? this.maxPinnedCount 
-						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-					this.pinnedToTopCount = 0;
-				} else if (this.pinnedToBottomCount > this.currentMaxPinnedCount) {
-					yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
-					this.currentMaxPinnedCount = (this.currentMaxPinnedCount <= this.minPinnedCount) 
-						? this.maxPinnedCount 
-						: this.currentMaxPinnedCount - Physics.prototype.getRandomInteger(2,7);
-					this.pinnedToBottomCount = 0;
-				}
-
-				// randomize the amount by which y is offset unless it's been reset because it's pinned
-				this.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
-				this.yCenterOffsetMod = yCenterOffsetMod;
+			// ensure top obstacles always have a height of at least this.settings.minObstacleHeight
+			if (!!pinnedToTop) {
+				topHeight = this.settings.minObstacleHeight;
+				this.counters.pinnedToTopCount++;
 			}
 			
-			//this.obstacles.top.push([currentX,topHeight]);
-			//this.obstacles.bottom.push([currentX,bottomY]);
+			// y coordinate of bottom obstacle = calculated height of the top obstacle + path height
+			var bottomY = topHeight + this.settings.obstaclePathMinHeight + Physics.prototype.getRandomInteger(1,10);
+			
+			// ensure y coordinate is always at least this.settings.minObstacleHeight less than board height
+			// thus ensuring that bottom obstacles always have a height of at least this.settings.minObstacleHeight
+			if (!!pinnedToBottom) {
+				bottomY = this.dimensions.height - this.settings.minObstacleHeight;
+				this.counters.pinnedToBottomCount++;
+			}
+
+			// set bottomHeight
+			var bottomHeight = this.dimensions.height - bottomY;
+			
+			// ensure topHeight respects min path height when bottomY is restricted from hitting bottom
+			topHeight = (bottomY == this.dimensions.height - this.settings.minObstacleHeight) 
+				? bottomY - this.settings.obstaclePathMinHeight 
+				: topHeight + Physics.prototype.getRandomInteger(10,100);
+			
+			// unpin path from top or bottom if necessary
+			if (this.counters.pinnedToTopCount > this.settings.maxPinnedCount) {
+				// home
+				yCenterOffset = Math.abs(pathPadding + pathCenter + this.settings.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+				// work
+				// yCenterOffset = Math.abs(pathCenter + this.settings.minObstacleHeight + Physics.prototype.getRandomInteger(3,9));
+				this.settings.maxPinnedCount = (this.settings.maxPinnedCount <= this.settings.minPinnedCount) 
+					? this.settings.maxPinnedCount 
+					: this.settings.maxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+				this.counters.pinnedToTopCount = 0;
+			} else if (this.counters.pinnedToBottomCount > this.settings.maxPinnedCount) {
+				yCenterOffset = -Math.abs(Math.abs(yCenterOffset) - this.settings.minObstacleHeight - Physics.prototype.getRandomInteger(3,9));
+				this.settings.maxPinnedCount = (this.settings.maxPinnedCount <= this.settings.minPinnedCount) 
+					? this.settings.maxPinnedCount 
+					: this.settings.maxPinnedCount - Physics.prototype.getRandomInteger(2,7);
+				this.counters.pinnedToBottomCount = 0;
+			}
+
+			// randomize the amount by which y is offset unless it's been reset because it's pinned
+			this.settings.yCenterOffset = (!!pinned) ? yCenterOffset : Physics.prototype.getRandomInteger(yCenterOffset,yCenterOffset + yCenterOffsetMod);
+			this.settings.yCenterOffsetMod = yCenterOffsetMod;
+			
 			
 			this.obstacles.top.push(new Obstacle(
 				currentX, // x
 				topY, // y
 				this.obstacleWidth, // width
 				topHeight, // height
-				this.rgba.red,
-				this.rgba.green,
-				this.rgba.blue,
-				this.rgba.opacity
+				this.settings.rgba.red,
+				this.settings.rgba.green,
+				this.settings.rgba.blue,
+				this.settings.rgba.opacity
 			));
 			
 			// create bottom obstacle and push into obstacles array
@@ -155,16 +127,11 @@ function Board(canvas, animation) {
 				bottomY, // y
 				this.obstacleWidth, // w
 				bottomHeight, // h
-				this.rgba.red,
-				this.rgba.green,
-				this.rgba.blue,
-				this.rgba.opacity
+				this.settings.rgba.red,
+				this.settings.rgba.green,
+				this.settings.rgba.blue,
+				this.settings.rgba.opacity
 			));
-			//randomize color
-			//if ((i % 3 == 0) || (i % 2 == 0)) {
-			//	if (i % 3 == 0) this.rgba.blue = Physics.prototype.modulateColor(this.rgba.blue);
-			//	else this.rgba.green = Physics.prototype.modulateColor(this.rgba.green);
-			//} else this.rgba.red = Physics.prototype.modulateColor(this.rgba.red);
 			
 			// update the x coordinates for the next pair of obstacles
 			currentX += this.obstacleWidth;
@@ -174,34 +141,28 @@ function Board(canvas, animation) {
 	this.draw = (entity, type, lag) => {
 		var drawType = (typeof type != 'undefined') ? type : entity.drawType;
 		var lag = (typeof lag != 'undefined') ? lag : 1;
+		this.context.lineWidth = 3;
 		switch(drawType) {
 			case 'arc':
 				this.context.beginPath();
 				if (!!entity.collided) {
-					console.log('player collided');
 					this.context.strokeStyle = this.context.fillStyle = 'rgba(200,20,20,1.0)';
 				} else {
 					this.context.strokeStyle = this.context.fillStyle = 'rgba(20,20,20,1.0)';
 				}
 				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
-				this.context.lineWidth = 3;
-				this.context.closePath();
 				this.context.fill();
 			break;
 			case 'lineTo':
-				this.context.fillStyle = 'rgba('+this.rgba.red+','+this.rgba.green+','+this.rgba.blue+','+(this.rgba.opacity - 0.3)+')';
-				this.context.lineWidth = 3;
-				this.context.strokeStyle = 'rgba(0,0,120,'+this.rgba.opacity+')';
-
+				this.context.fillStyle = 'rgba('+this.settings.rgba.red+','+this.settings.rgba.green+','+this.settings.rgba.blue+','+(this.settings.rgba.opacity - 0.3)+')';
+				this.context.strokeStyle = 'rgba(0,0,120,'+this.settings.rgba.opacity+')';
+				
 				// draw top
 				this.context.beginPath();
 				this.context.moveTo(0, 0);
 				this.context.lineTo(0, entity.top[0].dim.h);
 				for (var i = 0; i < entity.top.length; i++) {
 					entity.top[i].dim.x -= (!!this.animated) ? this.obstacleWidth * lag : 0;
-					if (!!this.travelWithPath) {
-						entity.top[i].dim.y += this.topAdjust
-					}
 					this.context.lineTo(entity.top[i].dim.x, entity.top[i].dim.h);
 				}
 				this.context.lineTo(this.dimensions.width, entity.top[entity.top.length - 1].dim.h);
@@ -215,9 +176,6 @@ function Board(canvas, animation) {
 				this.context.moveTo(0, entity.bottom[0].dim.y);
 				for (var i = 0; i < entity.bottom.length; i++) {
 					entity.bottom[i].dim.x -= (!!this.animated) ? this.obstacleWidth : 0;
-					if (!!this.travelWithPath) {
-						entity.bottom[i].dim.y += this.topAdjust
-					}
 					this.context.lineTo(entity.bottom[i].dim.x, entity.bottom[i].dim.y);
 				}
 				this.context.lineTo(this.dimensions.width, entity.bottom[entity.bottom.length - 1].dim.y);
@@ -227,96 +185,130 @@ function Board(canvas, animation) {
 				this.context.fill();
 				this.context.stroke();
 			break;
-			
-			// remove
-			case 'path':
-				entity.dim.x -= (!!this.animated) ? entity.dim.w : 0;
-				if (!!this.travelWithPath) {
-					entity.dim.y += this.topAdjust
-					entity.dim.h -= this.topAdjust;
+			case 'simpleRect':
+				var destroy = [];
+				for (var i = 0; i < entity.length; i++) {
+					/*if (!!entity[i].collided) {
+						this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+						this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
+					} else {*/
+						this.context.fillStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
+					/*}*/
+					
+					// flag for removal if the entity is destroyed or offscreen
+					if (!!entity[i].destroyed || (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.right >= this.dimensions.width || entity[i].dim.bottom >= this.dimensions.height)) destroy.push(i);
+					
+					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
+					this.context.beginPath();
+					this.context.rect(entity[i].dim.x, entity[i].dim.y, entity[i].dim.w, entity[i].dim.h);
+					this.context.fill();
 				}
-				this.context.beginPath();
-				this.context.moveTo(entity.dim.x, entity.dim.y);
-				this.context.lineTo(entity.dim.x, entity.dim.y + entity.dim.h);
-				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y + entity.dim.h);
-				this.context.lineTo(entity.dim.x + entity.dim.w, entity.dim.y);
-				this.context.closePath();
-				if (!!entity.collided) {
-					console.log('obstacle collided');
-					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-				} else {
-					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-				}
-				this.context.fill();
-				this.context.stroke();
+				
+				// remove any entities that have moved off the screen.
+				if (destroy.length > 0)  entity.splice(destroy[0], destroy.length);
 			break;
 			case 'rect':
-			console.log(entity);
-				entity.dim.x = (!!this.animated) ? Physics.prototype.getRandomInteger(1,3) : this.dimensions.w - entity.dim.w - 10;
-				entity.dim.y = (!!this.animated) ? Physics.prototype.getRandomInteger(1,3) : this.dimensions.height / 2;
-				if (!!this.travelWithPath) {
-					entity.dim.y += this.topAdjust
-					entity.dim.h -= this.topAdjust;
+				var destroy = [];
+				for (var i = 0; i < entity.length; i++) {
+					if (!!entity[i].collided) {
+						destroy.push(i);
+					} else if (!!entity[i].destroyed) {
+						this.context.strokeStyle = 'rgba(200,20,20,1.0)';
+						this.context.fillStyle = 'rgba(255,100,20,1.0)';
+						destroy.push(i);
+					} else {
+						this.context.fillStyle = 'rgba('+entity[i].rgba.red+',255,'+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
+						this.context.strokeStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
+					}
+					
+					entity[i].xMod = Physics.prototype.getRandomInteger(15,20);
+							
+					if (entity[i].yDirCount.up > 20) entity[i].yDirCount.up = 0;
+					else if (entity[i].yDirCount.down > 20) entity[i].yDirCount.down = 0;
+					
+					if (entity[i].yDirCount.up == 0 && entity[i].yDirCount.down == 0) {
+						entity[i].yMod = Physics.prototype.getRandomInteger(1,7);
+						entity[i].yMod = Physics.prototype.toggleValue(Math.abs(entity[i].yMod), -Math.abs(entity[i].yMod));
+					}
+					
+					if (entity[i].yMod > 0) {
+						entity[i].yMod = Math.abs(Physics.prototype.getRandomInteger(1,7));
+						entity[i].yDirCount.up++; 
+					} else if (entity[i].yMod < 0) {
+						entity[i].yMod = -Math.abs(Physics.prototype.getRandomInteger(1,7));
+						entity[i].yDirCount.down++;
+					}
+					
+					entity[i].dim.x = (!!this.animated && entity[i].status != 'new') 
+						? entity[i].dim.x - entity[i].xMod
+						: this.dimensions.width - entity[i].dim.w - 10;
+					
+					entity[i].dim.y = (!!this.animated && entity[i].status != 'new') 
+						? entity[i].dim.y - entity[i].yMod 
+						: this.dimensions.height / 2 - entity[i].yMod;
+					
+					entity[i].dim.bottom = entity[i].dim.y + entity[i].dim.h;
+					entity[i].dim.right = entity[i].dim.x + entity[i].dim.w;
+					
+					// flag for removal if the entity is destroy
+					if (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.y >= this.dimensions.height) destroy.push(i);
+					
+					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
+					this.context.beginPath();
+					this.context.rect(entity[i].dim.x, entity[i].dim.y, entity[i].dim.w, entity[i].dim.h);
+					this.context.fill();
+					this.context.stroke();
 				}
-				this.context.rect(entity.dim.x, entity.dim.y, entity.dim.w, entity.dim.h);
-				/*if (!!entity.collided) {
-					console.log('obstacle collided');
-					this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-				} else {*/
-					this.context.fillStyle = 'rgba('+entity.rgba.red+','+entity.rgba.green+','+entity.rgba.blue+','+entity.rgba.opacity+')';
-					this.context.strokeStyle = 'rgba('+entity.rgba.red+',255,'+entity.rgba.blue+','+entity.rgba.opacity+')';
-				/*}*/
-				this.context.fill();
-				this.context.stroke();
+				
+				// remove any entities that have moved off the screen.
+				if (destroy.length > 0)  entity.splice(destroy[0], destroy.length);
 			break;
 		}
 	}
-	this.maxObstacles = 150;
-	this.obstacleWidth = this.dimensions.width / this.maxObstacles;
-	this.maxPinnedCount = 15;
-	this.currentMaxPinnedCount = this.maxPinnedCount;
-	this.minPinnedCount = 3;
-	this.maxYCenterOffsetMod = 30;
-	this.minObstacleHeight = 40;
-	this.obstaclePathMinHeight = 600;
+	this.enemies = [];
 	this.obstacles = {
 		top: [],
 		bottom: []
 	};
-	this.pinnedToTopCount = 0;
-	this.pinnedToBottomCount = 0;
-	this.rgba = {
-		red: 20,
-		green: 20,
-		blue: 200,
-		opacity: 1.0
-	}
 	
-	// the amount by which the board must shift vertically to follow path
-	this.topAdjust = 0;
-	
-	// specify whether or not board should travel vertically with path
-	// or path should be bounded by the board
-	this.travelWithPath = false;
-	
-	// the amount by which to offset the y value from vertical center
-	this.yCenterOffset = Physics.prototype.getRandomInteger(3,9);
-	
-	// the amount by which yCenterOffset varies from one obstacle to the next
-	this.yCenterOffsetMod = 10;
 	this.player = null;
+	
+	this.projectiles = [];
+	
+	this.settings = {
+		enemyEntryPace: 20,
+		maxObstacles: 150,
+		maxPinnedCount: 15,
+		maxYCenterOffsetMod: 30,
+		minObstacleHeight: 40,
+		minPinnedCount: 3,
+		obstaclePathMinHeight: 600,
+		rgba: {
+			red: 20,
+			green: 20,
+			blue: 200,
+			opacity: 1.0
+		},
+		// the amount by which to offset the y value from vertical center
+		yCenterOffset: Physics.prototype.getRandomInteger(3,9),
+		// the amount by which yCenterOffset varies from one obstacle to the next
+		yCenterOffsetMod: 10
+	}
+	this.obstacleWidth = this.dimensions.width / this.settings.maxObstacles;
+	
+	this.id = Util.prototype.getGuid();
 }
 
-function Controls() {
+function Control() {
 	this.keywords = ['start'];
 	this.arrowKeys = ['ArrowRight','ArrowLeft','ArrowUp','ArrowDown'];
 	this.pressedKeys = {};
+	this.id = Util.prototype.getGuid();
 }
 
-function Enemy(w, h) {
+function Enemy(w, h, m) {
+	this.collided = false;
+	this.destroyed = false;
 	this.dim = {
 		h: h,
 		originalDim: {
@@ -324,21 +316,29 @@ function Enemy(w, h) {
 			w: w
 		},
 		w: w,
-		movement: 'random'
+		movement: m
 	}
+	this.yDirCount = {
+		up: 0,
+		down: 0
+	}
+	this.xMod;
+	this.yMod;
 	this.drawType = 'rect';
-	this.update = (x, y, w, h) => {
+	this.status = 'new';
+	/*this.update = (x, y, w, h) => {
 		this.dim.x = x;
 		this.dim.y = y;
 		this.dim.w = w;
 		this.dim.h = h;
-	}
+	}*/
 	this.rgba = {
 		red: 20,
 		green: 120,
 		blue: 20,
 		opacity: 1.0
 	}
+	this.id = Util.prototype.getGuid();
 }
 
 function Flow() {
@@ -356,20 +356,22 @@ function Flow() {
 	
 	this.stop = () => {
 	}
+	this.id = Util.prototype.getGuid();
 }
 
-function Game(canvas, d_canvas) {
+function Game(canvas, d_canvas) {	
+	this.advanceGame = () => {
+		return setInterval(() => {
+			//this.animation.frameLength = Date.now() - this.animation.lastFrame;
+			//this.animation.lastFrame = Date.now();
+			this.updateGame();
+		}, this.animation.updateFpsAsMilliseconds);
+	}
 	this.animation = new Animation();
 	// display board
 	this.board = new Board(canvas, this.animation);
 	
-	this.boardIndex = 1;
-	this.controls = new Controls();	
-	this.inputs = {
-		word: ''
-	}
-	this.physics = new Physics();
-	this.status = 'pending';
+	this.control = new Control();	
 	
 	this.init = () => {
 		// set up entities
@@ -380,23 +382,21 @@ function Game(canvas, d_canvas) {
 		this.board.createObstacles();
 		
 			//enemy
-		this.board.enemy = new Enemy(30, 10);
+		this.board.enemies.push(new Enemy(30, 10, 'random'));
 
-		// draw entities
+		// draw entities		
+			// enemies
+		this.board.draw(this.board.enemies, 'rect');
+		
 			// player
 		this.board.draw(this.board.player);
 		
 			// obstacles
 		this.board.draw(this.board.obstacles, 'lineTo');
 		
-			// obstacles
-		this.board.draw(this.board.enemy);
-		
-		//this.board.context.drawImage(this.board.canvas, 0, 0);
-		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
-			var action, appData, data;
+			var action, appData, data, destroyedEnemies;
 			data = e.data;
 			action = data.action;
 			appData = data.appData;
@@ -405,18 +405,37 @@ function Game(canvas, d_canvas) {
 				case 'move player':
 					if (appData.collision != null) {
 						this.board.player.collided = true;
-						appData.collision.collided = true;
 						this.status = 'collision';
 					} else {
 						this.board.createObstacles();
-						this.board.player.update(appData.x, appData.y, appData.radius);
+						if (appData.shotDown.length > 0) {
+							destroyedEnemies = [];
+							for (var i = 0; i < appData.shotDown.length; i++) {
+								var enemyId = appData.shotDown[i];
+								destroyed = this.board.enemies.filter(function(el) {
+									return el.id == enemyId;
+								});
+								destroyedEnemies = destroyedEnemies.concat(destroyed);
+							}
+							if (destroyedEnemies.length > 0) {
+								for (var i = 0; i < destroyedEnemies.length; i++) {
+									destroyedEnemies[i].destroyed = true;
+								}
+							}
+						}
+						this.board.player.update(appData.x, appData.y, appData.radius, appData.weapons);
 					}
 				break;
 			}
 		}
 	}
+	this.inputs = {
+		word: ''
+	}
 	this.filteredObstacles;
-	this.lag = 0.0;
+	this.filteredProjectiles;
+	this.lag = 0.0;	
+	this.physics = new Physics();
 	// main loop
 	this.run = (timestamp) => {
 		// see here for consistent frame rate logic:
@@ -425,26 +444,28 @@ function Game(canvas, d_canvas) {
 		this.animation.lastFrame = timestamp;
 		this.board.animated = true;
 		if (timestamp < this.animation.lastFrame + this.animation.fpsAsMilliseconds) {
+			// clear board to prepare for next animation state
+			this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 			if (this.status == 'playing' && this.animation.lastFrame !== null) {
-				if (this.boardIndex < 0 || this.boardIndex > 0) {
-					// clear board to prepare for next animation state
-					this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
-					this.board.draw(this.board.player);
-					this.board.draw(this.board.obstacles, 'lineTo');
-					this.board.obstacles.top.splice(0,1);
-					this.board.obstacles.bottom.splice(0,1);
-					this.boardIndex = 1;
-				}
+				this.board.draw(this.board.enemies, 'rect');
+				this.board.draw(this.board.player);
+				this.board.draw(this.board.projectiles, 'simpleRect');
+				this.board.draw(this.board.obstacles, 'lineTo');
+				this.board.obstacles.top.splice(0,1);
+				this.board.obstacles.bottom.splice(0,1);
 			} else {
 				if (this.status == 'collision') {
 					this.board.player.collided = true;
+					this.board.draw(this.board.enemies, 'rect');
 					this.board.draw(this.board.player);
+				this.board.draw(this.board.projectiles, 'simpleRect');
+					this.board.animated = false;
+					this.board.draw(this.board.obstacles, 'lineTo');
 					this.stop('over');
 				}
 			}
 		}
 	}
-	
 	this.start = () => {
 		this.animation.lastFrame = performance.now();
 		this.status = 'playing';
@@ -453,6 +474,8 @@ function Game(canvas, d_canvas) {
 		// start game updates
 		this.update = this.advanceGame();
 	}
+	
+	this.status = 'pending';
 	
 	this.stop = (status) => {
 		this.status = status;
@@ -464,16 +487,59 @@ function Game(canvas, d_canvas) {
 	
 	this.update;
 	this.updateGame = () => {
+		// check if enemies should be added and, if so, add them
+		if (this.board.counters.enemyEntryCounter >= this.board.settings.enemyEntryPace) {
+			this.board.enemies.push(new Enemy(30, 10, 'random'));
+			this.board.counters.enemyEntryCounter = 0;
+		} else this.board.counters.enemyEntryCounter++;
+		
+		// check if player is firing and, if so, add projectiles
+		if (!!this.board.player.weapons.primary.firing) {
+			if (this.board.player.weapons.primary.delay == 0) {
+				this.board.projectiles.push(new Projectile(this.board.player.dim.x, this.board.player.dim.y, 'player'));
+				this.board.player.weapons.primary.delay++
+			} else {
+				if (this.board.player.weapons.primary.delay >= this.board.player.weapons.primary.firingRate) 
+					this.board.player.weapons.primary.delay = 0;
+				else this.board.player.weapons.primary.delay++
+			}
+		}
+		
+		// find top obstacles close to the player
 		var filteredTopObstacles = this.board.obstacles.top.filter((el) => {
 			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
 		});
+		
+		// find bottom obstacles close to the player
 		var filteredBottomObstacles = this.board.obstacles.bottom.filter((el) => {
 			return (el.dim.x > (this.board.player.dim.x - 5) && el.dim.x < (this.board.player.dim.x + 5));
 		});
+		
+		// combine top and bottom obstacles close to the player
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
+		
+		// find enemies close to the player
+		var filteredEnemies = this.board.enemies.filter((el) => {
+			return (el.dim.x > (this.board.player.dim.x - 15) && el.dim.x < (this.board.player.dim.x + 15));
+		});
+		
+		var filteredProjectiles = [];
+		for (var i = 0; i < this.board.projectiles.length; i++) {
+			var dimX = (this.board.animated) 
+				? this.board.projectiles[i].dim.x + this.board.projectiles[i].xMod
+				: this.board.projectiles[i].dim.x;
+			var dimY =  (this.board.animated) 
+				? this.board.projectiles[i].dim.y + this.board.projectiles[i].yMod
+				: this.board.projectiles[i].dim.y;
 			
-			// obstacles
-		this.board.draw(this.board.enemy);
+			var projectile = this.board.projectiles[i];
+			
+			Projectile.prototype.update(projectile, dimX, dimY);
+			var interimProjectiles = this.board.projectiles.filter((el) => {
+				return (projectile.dim.x > (el.dim.x - 15) && projectile.dim.x < (el.dim.x + 15));
+			});
+			filteredProjectiles = filteredProjectiles.concat(interimProjectiles);
+		}
 		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
@@ -486,31 +552,14 @@ function Game(canvas, d_canvas) {
 					height: this.board.dimensions.height
 				},
 				obstacles: filteredObstacles,
-				controls: this.controls
+				enemies: filteredEnemies,
+				projectiles: filteredProjectiles,
+				enemyTargets: this.board.enemies,
+				control: this.control
 			}
 		});
 	}
-	
-	this.advanceGame = () => {
-		return setInterval(() => {
-			//this.animation.frameLength = Date.now() - this.animation.lastFrame;
-			//this.animation.lastFrame = Date.now();
-			this.updateGame();
-		}, this.animation.updateFpsAsMilliseconds);
-	}
-	
-	/*this.advanceGame = () => {
-		var elapsed;
-		var time;
-		do {
-			time = new Date().getTime();
-			elapsed = time - this.animation.lastFrame;
-		} while (elapsed < this.animation.fpsAsMilliseconds);
-		this.animation.frameLength = time - this.animation.lastFrame;
-		this.animation.lastFrame = new Date().getTime();
-		this.updateGame();
-		this.advanceGame();
-	}*/
+	this.id = Util.prototype.getGuid();
 }
 
 function Obstacle(x, y, w, h, r, g, b, a) {
@@ -529,6 +578,7 @@ function Obstacle(x, y, w, h, r, g, b, a) {
 		blue: b,
 		opacity: a
 	};
+	this.id = Util.prototype.getGuid();
 }
 
 function Physics() {
@@ -592,6 +642,7 @@ Physics.prototype.setObjectDimensions = (piece) => {
 }
 
 function Player(x, y, r) {
+	this.collided = false;
 	this.dim = {
 		radius: r,
 		originalDim: {
@@ -603,13 +654,65 @@ function Player(x, y, r) {
 		y: y
 	}
 	this.drawType = 'arc';
-	this.update = (x, y, r) => {
+	this.update = (x, y, r, weapons) => {
 		this.dim.x = x;
 		this.dim.y = y;
 		this.dim.radius = r;
+		this.weapons.primary.firing = weapons.primary;
 	}
+	this.weapons = {
+		primary: {
+			firing: false,
+			firingRate: 10,
+			delay: 0
+		}
+	}
+	this.id = Util.prototype.getGuid();
 }
 
+function Projectile(x, y, source) {
+	this.dim = {
+		x: x,
+		y: y,
+		w: 10,
+		h: 3
+	}
+	this.dim.bottom = this.dim.y + this.dim.h;
+	this.dim.right = this.dim.x + this.dim.w;
+	this.xMod = 15;
+	this.yMod = 0;
+	this.source = source;
+	this.drawType = 'simpleRect';
+	this.status = 'new';
+	this.rgba = {
+		red: 120,
+		green: 20,
+		blue: 120,
+		opacity: 1.0
+	}
+	this.id = Util.prototype.getGuid();
+}
+Projectile.prototype.update = (projectile, x, y) => {
+	projectile.dim.x = x;
+	projectile.dim.y = y;
+	projectile.dim.right = projectile.dim.x + projectile.dim.w;
+	projectile.dim.bottom = projectile.dim.y + projectile.dim.h;
+}
+
+function Util() {}
+Util.prototype.getGuid = () => {
+	// guid and s4 logic courtesy of https://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
+	var guid = () => {
+		return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+			s4() + '-' + s4() + s4() + s4();
+	}
+	var s4 = () => {
+		return Math.floor((1 + Math.random()) * 0x10000)
+		.toString(16)
+		.substring(1);
+	}
+	return guid();
+}
 $(document).on('ready',function() {
 	var canvas = document.getElementById('game-board');
 	$(canvas).attr('width', $('#container').width());
@@ -620,19 +723,19 @@ $(document).on('ready',function() {
 	game.init();	
 		
 	ickyfoot.setUpKeyDetection(function(key,type) {
-		game.controls.pressedKeys[key] = (type == 'keydown' || type == 'keypress');
+		game.control.pressedKeys[key] = (['keydown','keypress'].indexOf(type) > -1);
 		if (type == 'keydown') {
 			game.inputs.word += key
 			if (game.status == 'pending' && game.inputs.word == 'start') {
 				game.start();
 				game.inputs.word = '';
 			} else {
-				for (var i = 0; i < game.controls.keywords.length; i++)
-					game.inputs.word = (game.controls.keywords[i].indexOf(game.inputs.word) == -1) ? '' : game.inputs.word;
+				for (var i = 0; i < game.control.keywords.length; i++)
+					game.inputs.word = (game.control.keywords[i].indexOf(game.inputs.word) == -1) ? '' : game.inputs.word;
 			}
 		}		
 				
-		if (key == ' ') {
+		if (['p','P'].indexOf(key) > -1) {
 			if (type == 'keydown' || type == 'keypress') {
 				if (game.status != 'over') {
 					game.status = (game.status == 'paused') ? 'playing' : 'paused';
@@ -646,7 +749,7 @@ $(document).on('ready',function() {
 		}
 		
 		if (key == 'Escape') {
-			if (type == 'keydown' || type == 'keypress') {
+			if (['keydown','keypress'].indexOf(type) > -1) {
 				game.stop('over');
 				return;
 			} else return;
