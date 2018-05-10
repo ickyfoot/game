@@ -302,7 +302,7 @@ function Enemy(w, h, m) {
 }
 
 Enemy.prototype.update = (enemy, board) => {
-	enemy.xMod = Physics.prototype.getRandomInteger(15,20);
+	enemy.xMod = Physics.prototype.getRandomInteger(7,10);
 			
 	if (enemy.yDirCount.up > 20) enemy.yDirCount.up = 0;
 	else if (enemy.yDirCount.down > 20) enemy.yDirCount.down = 0;
