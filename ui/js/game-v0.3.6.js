@@ -511,12 +511,14 @@ function Game(canvas, d_canvas) {
 		// combine top and bottom obstacles close to the player
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
+		// update projectiles
 		var filteredProjectiles = [];		
 		for (var i = 0; i < this.board.projectiles.length; i++) {			
 			var projectile = this.board.projectiles[i];			
 			Projectile.prototype.update(projectile);
 		}
 		
+		// update enemies and find projectiles close to enemies
 		for (var i = 0; i < this.board.enemies.length; i++) {			
 			var enemy = this.board.enemies[i];			
 			Enemy.prototype.update(enemy, this.board);
