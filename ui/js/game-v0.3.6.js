@@ -308,7 +308,7 @@ Enemy.prototype.update = (enemy, board) => {
 	else if (enemy.yDirCount.down > 20) enemy.yDirCount.down = 0;
 	
 	if (enemy.yDirCount.up == 0 && enemy.yDirCount.down == 0) {
-		enemy.yMod = Physics.prototype.getRandomInteger(1,7);
+		enemy.yMod = Physics.prototype.getRandomInteger(7,10);
 		enemy.yMod = Physics.prototype.toggleValue(Math.abs(enemy.yMod), -Math.abs(enemy.yMod));
 	}
 	
@@ -322,7 +322,7 @@ Enemy.prototype.update = (enemy, board) => {
 	
 	enemy.dim.x = (enemy.status != 'new') 
 		? enemy.dim.x - enemy.xMod
-		: board.dimensions.width - enemy.dim.w - 10;
+		: board.dimensions.width + enemy.dim.w;
 	
 	enemy.dim.y = (enemy.status != 'new') 
 		? enemy.dim.y - enemy.yMod 
@@ -488,7 +488,7 @@ function Game(canvas, d_canvas) {
 		
 		// check if player is firing and, if so, add projectiles
 		if (!!this.board.player.weapons.primary.firing) {
-			if (this.board.player.weapons.primary.delay == 0) {
+			if (this.board.player.weapons.primary.delay == 0 && this.board.projectiles.length < this.board.player.weapons.primary.max) {
 				this.board.projectiles.push(new Projectile(this.board.player.dim.x, this.board.player.dim.y, 'player'));
 				this.board.player.weapons.primary.delay++
 			} else {
@@ -654,9 +654,10 @@ function Player(x, y, r) {
 	}
 	this.weapons = {
 		primary: {
+			delay: 0,
 			firing: false,
 			firingRate: 10,
-			delay: 0
+			max: 3
 		}
 	}
 	this.id = Util.prototype.getGuid();
