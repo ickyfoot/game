@@ -331,9 +331,6 @@ Enemy.prototype.update = (enemy, board) => {
 	enemy.dim.bottom = enemy.dim.y + enemy.dim.h;
 	enemy.dim.right = enemy.dim.x + enemy.dim.w;
 	
-	// flag for removal if the entity is destroy
-	if (enemy.dim.x <= 0 || enemy.dim.y <= 0 || enemy.dim.y >= board.dimensions.height) destroy.push(i);
-	
 	enemy.status = (enemy.status == 'new') ? 'established' : enemy.status;
 }
 
@@ -514,25 +511,25 @@ function Game(canvas, d_canvas) {
 		// combine top and bottom obstacles close to the player
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
-		var filteredProjectiles = [];
+		var filteredProjectiles = [];		
+		for (var i = 0; i < this.board.projectiles.length; i++) {			
+			var projectile = this.board.projectiles[i];			
+			Projectile.prototype.update(projectile);
+		}
 		
 		for (var i = 0; i < this.board.enemies.length; i++) {			
 			var enemy = this.board.enemies[i];			
 			Enemy.prototype.update(enemy, this.board);
-			// find enemies close to the player
-		}
-		var filteredEnemies = this.board.enemies.filter((el) => {
-			return (el.dim.x > (this.board.player.dim.x - 15) && el.dim.x < (this.board.player.dim.x + 15));
-		});
-		
-		for (var i = 0; i < this.board.projectiles.length; i++) {			
-			var projectile = this.board.projectiles[i];			
-			Projectile.prototype.update(projectile);
-			var interimProjectiles = this.board.enemies.filter((el) => {
-				return (projectile.dim.x > (el.dim.x - 15) && projectile.dim.x < (el.dim.x + 15));
+			var interimProjectiles = this.board.projectiles.filter((el) => {
+				return (enemy.dim.x > (el.dim.x - 15) && enemy.dim.x < (el.dim.x + 15));
 			});
 			filteredProjectiles = filteredProjectiles.concat(interimProjectiles);
 		}
+		
+		// find enemies close to the player
+		var filteredEnemies = this.board.enemies.filter((el) => {
+			return (el.dim.x > (this.board.player.dim.x - 15) && el.dim.x < (this.board.player.dim.x + 15));
+		});
 		
 		// send info to Web Worker to determine if it's time to redraw
 		// redrawing is handled in this.worker callback defined in this.init	
