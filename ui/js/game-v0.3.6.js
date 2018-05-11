@@ -656,8 +656,8 @@ function Player(x, y, r) {
 		primary: {
 			delay: 0,
 			firing: false,
-			firingRate: 10,
-			max: 3
+			firingRate: 15,
+			max: 5
 		}
 	}
 	this.id = Util.prototype.getGuid();
