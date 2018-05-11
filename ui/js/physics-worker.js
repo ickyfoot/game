@@ -44,9 +44,13 @@ function Physics() {
 	}
 	
 	this.detectShotDown = (projectiles, targets) => {
-		var outerShotDown = [];
+		var obj = {
+			shotDown: [],
+			successfulProjectiles: []
+		}
 		for (var i = 0; i < targets.length; i++) {
 			var shotDown = [];
+			var successfulProjectiles = [];
 			for (var j = 0; j < projectiles.length; j++) {
 				if (
 						(
@@ -62,11 +66,13 @@ function Physics() {
 						)
 					) {
 					shotDown.push(targets[i].id);
+					successfulProjectiles.push(projectiles[j].id);
 				}
 			}
-			outerShotDown = outerShotDown.concat(shotDown);
+			obj.shotDown = obj.shotDown.concat(shotDown);
+			obj.successfulProjectiles = obj.successfulProjectiles.concat(successfulProjectiles);
 		}
-		return outerShotDown;
+		return obj;
 	}
 	
 	this.getNewDimensions = (data) => {
@@ -133,7 +139,7 @@ onmessage = function(e) {
 			dim = physics.getNewDimensions(appData);
 			weapons = physics.checkWeapons(appData);
 			collision = (appData.obstacles !== null) ? physics.detectCollision(dim,appData.obstacles) : null;
-			shotDown = (appData.projectiles !== null) ? physics.detectShotDown(appData.projectiles, appData.enemyTargets) : null;
+			shotDownObj = (appData.projectiles !== null) ? physics.detectShotDown(appData.projectiles, appData.enemyTargets) : null;
 			if (collision === null) {
 				collision = (appData.enemies !== null) ? physics.detectCollision(dim,appData.enemies) : null;
 			}
@@ -148,7 +154,7 @@ onmessage = function(e) {
 				appData: {
 					collision: collision,
 					radius: dim.radius,
-					shotDown: shotDown,
+					shotDownObj: shotDownObj,
 					x: dim.x,
 					y: dim.y,
 					weapons: weapons

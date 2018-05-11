@@ -188,12 +188,16 @@ function Board(canvas, animation) {
 			case 'simpleRect':
 				var destroy = [];
 				for (var i = 0; i < entity.length; i++) {
-					/*if (!!entity[i].collided) {
+					if (!!entity[i].collided) {
 						this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
 						this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					} else {*/
+					} else if (!!entity[i].destroyed) {
+						this.context.strokeStyle = 'rgba(200,20,20,1.0)';
+						this.context.fillStyle = 'rgba(255,100,20,1.0)';
+						destroy.push(i);
+					} else {
 						this.context.fillStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
-					/*}*/
+					}
 					
 					// flag for removal if the entity is destroyed or offscreen
 					if (!!entity[i].destroyed || (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.right >= this.dimensions.width || entity[i].dim.bottom >= this.dimensions.height)) destroy.push(i);
@@ -389,7 +393,7 @@ function Game(canvas, d_canvas) {
 		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
-			var action, appData, data, destroyedEnemies;
+			var action, appData, data, destroyedEnemies, destroyedProjectiles;
 			data = e.data;
 			action = data.action;
 			appData = data.appData;
@@ -401,10 +405,11 @@ function Game(canvas, d_canvas) {
 						this.status = 'collision';
 					} else {
 						this.board.createObstacles();
-						if (appData.shotDown.length > 0) {
+						if (appData.shotDownObj.shotDown.length > 0) {
 							destroyedEnemies = [];
-							for (var i = 0; i < appData.shotDown.length; i++) {
-								var enemyId = appData.shotDown[i];
+							destroyedProjectiles = [];
+							for (var i = 0; i < appData.shotDownObj.shotDown.length; i++) {
+								var enemyId = appData.shotDownObj.shotDown[i];
 								destroyed = this.board.enemies.filter(function(el) {
 									return el.id == enemyId;
 								});
@@ -413,6 +418,19 @@ function Game(canvas, d_canvas) {
 							if (destroyedEnemies.length > 0) {
 								for (var i = 0; i < destroyedEnemies.length; i++) {
 									destroyedEnemies[i].destroyed = true;
+								}
+							}
+							
+							for (var i = 0; i < appData.shotDownObj.successfulProjectiles.length; i++) {
+								var projectileId = appData.shotDownObj.successfulProjectiles[i];
+								destroyed = this.board.projectiles.filter(function(el) {
+									return el.id == projectileId;
+								});
+								destroyedProjectiles = destroyedProjectiles.concat(destroyed);
+							}
+							if (destroyedProjectiles.length > 0) {
+								for (var i = 0; i < destroyedProjectiles.length; i++) {
+									destroyedProjectiles[i].destroyed = true;
 								}
 							}
 						}
