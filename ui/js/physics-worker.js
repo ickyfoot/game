@@ -129,26 +129,28 @@ function Physics() {
 
 onmessage = function(e) {
 	var physics = new Physics();
-	var appData, action, metaData;
+	var appData, action, metaData, enemyCollisions;
 	metaData = e.data;
 	appData = metaData.appData;
 	action = metaData.action;
+	enemyCollisions = [];
 	switch (action) {
 		case 'move player':
 			var dim, weapons, collision;
 			dim = physics.getNewDimensions(appData);
 			weapons = physics.checkWeapons(appData);
 			collision = (appData.obstacles !== null) ? physics.detectCollision(dim,appData.obstacles) : null;
-			shotDownObj = (appData.projectiles !== null) ? physics.detectShotDown(appData.projectiles, appData.enemyTargets) : null;
+			shotDownObj = (appData.projectiles !== null) 
+				? physics.detectShotDown(appData.projectiles, appData.enemyTargets) 
+				: null;	
+			for (var i = 0; i < appData.enemies; i++) {
+				var enemy = appData.enemies[i];
+				enemyCollisions.push(physics.detectCollision(enemy.dim,appData.obstacles_enemies));
+			}
+			console.log(enemyCollisions);
 			if (collision === null) {
 				collision = (appData.enemies !== null) ? physics.detectCollision(dim,appData.enemies) : null;
 			}
-			/*if (shotDown !== null) {
-				for (var i = 0; i < shotDown.length; i++) {
-					shotDown[i].collided = true;
-				}
-			}*/
-
 			postMessage({
 				action: 'move player',
 				appData: {

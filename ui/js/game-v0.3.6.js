@@ -492,6 +492,28 @@ function Game(canvas, d_canvas) {
 		// combine top and bottom obstacles close to the player
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
+		// find enemies close to top obstacles
+		var filteredTopObstacles_Enemies = [];
+		for (var i = 0; i < this.board.enemies.length; i++) {
+			var enemy = this.board.enemies[i];
+			var topObstacles = this.board.obstacles.top.filter((el) => {
+				return el.dim.x > (enemy.dim.x - 15) && el.dim.x < (enemy.dim.x + 15);
+			});
+			filteredTopObstacles_Enemies = filteredTopObstacles_Enemies.concat(topObstacles);
+		}
+		
+		// find enemies close to bottom obstacles
+		var filteredBottomObstacles_Enemies = [];
+		for (var i = 0; i < this.board.enemies.length; i++) {
+			var enemy = this.board.enemies[i];
+			var bottomObstacles = this.board.obstacles.bottom.filter((el) => {
+				return el.dim.x > (enemy.dim.x - 15) && el.dim.x < (enemy.dim.x + 15);
+			});
+			filteredBottomObstacles_Enemies = filteredBottomObstacles_Enemies.concat(bottomObstacles);
+		}
+
+		var filteredObstacles_Enemies = filteredTopObstacles_Enemies.concat(filteredBottomObstacles_Enemies);
+
 		var destroyedProjectiles = [];
 		for (var i = 0; i < this.board.projectiles.length; i++) {
 			var projectile = this.board.projectiles[i];
@@ -551,6 +573,7 @@ function Game(canvas, d_canvas) {
 					height: this.board.dimensions.height
 				},
 				obstacles: filteredObstacles,
+				obstacles_enemies: filteredObstacles_Enemies,
 				enemies: filteredEnemies,
 				projectiles: filteredProjectiles,
 				enemyTargets: this.board.enemies,
