@@ -138,104 +138,15 @@ function Board(canvas, animation) {
 		}
 	}
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
-	this.draw = (entity, type, lag) => {
-		var drawType = (typeof type != 'undefined') ? type : entity.drawType;
-		var lag = (typeof lag != 'undefined') ? lag : 1;
-		this.context.lineWidth = 3;
-		switch(drawType) {
-			case 'arc':
-				this.context.beginPath();
-				if (!!entity.collided) {
-					this.context.strokeStyle = this.context.fillStyle = 'rgba(200,20,20,1.0)';
-				} else {
-					this.context.strokeStyle = this.context.fillStyle = 'rgba(20,20,20,1.0)';
-				}
-				this.context.arc(entity.dim.x, entity.dim.y, entity.dim.radius, 0, 2*Math.PI);
-				this.context.fill();
-			break;
-			case 'lineTo':
-				this.context.fillStyle = 'rgba('+this.settings.rgba.red+','+this.settings.rgba.green+','+this.settings.rgba.blue+','+(this.settings.rgba.opacity - 0.3)+')';
-				this.context.strokeStyle = 'rgba(0,0,120,'+this.settings.rgba.opacity+')';
-				
-				// draw top
-				this.context.beginPath();
-				this.context.moveTo(0, 0);
-				this.context.lineTo(0, entity.top[0].dim.h);
-				for (var i = 0; i < entity.top.length; i++) {
-					entity.top[i].dim.x -= (!!this.animated) ? this.obstacleWidth * lag : 0;
-					this.context.lineTo(entity.top[i].dim.x, entity.top[i].dim.h);
-				}
-				this.context.lineTo(this.dimensions.width, entity.top[entity.top.length - 1].dim.h);
-				this.context.lineTo(this.dimensions.width, 0);
-				this.context.closePath();
-				this.context.fill();
-				this.context.stroke();
-				
-				// draw bottom
-				this.context.beginPath();
-				this.context.moveTo(0, entity.bottom[0].dim.y);
-				for (var i = 0; i < entity.bottom.length; i++) {
-					entity.bottom[i].dim.x -= (!!this.animated) ? this.obstacleWidth : 0;
-					this.context.lineTo(entity.bottom[i].dim.x, entity.bottom[i].dim.y);
-				}
-				this.context.lineTo(this.dimensions.width, entity.bottom[entity.bottom.length - 1].dim.y);
-				this.context.lineTo(this.dimensions.width, this.dimensions.height);
-				this.context.lineTo(0, this.dimensions.height);
-				this.context.closePath();
-				this.context.fill();
-				this.context.stroke();
-			break;
-			case 'simpleRect':
-				var destroy = [];
-				for (var i = 0; i < entity.length; i++) {
-					if (!!entity[i].collided) {
-						this.context.fillStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-						this.context.strokeStyle = 'rgba(200,'+entity.rgba.green+',20,'+entity.rgba.opacity+')';
-					} else if (!!entity[i].destroyed) {
-						this.context.strokeStyle = 'rgba(200,20,20,1.0)';
-						this.context.fillStyle = 'rgba(255,100,20,1.0)';
-						destroy.push(i);
-					} else {
-						this.context.fillStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
-					}
-					
-					// flag for removal if the entity is destroyed or offscreen
-					if (!!entity[i].destroyed || (entity[i].dim.x <= 0 || entity[i].dim.y <= 0 || entity[i].dim.right >= this.dimensions.width || entity[i].dim.bottom >= this.dimensions.height)) destroy.push(i);
-					
-					entity[i].status = (entity[i].status == 'new') ? 'established' : entity[i].status;
-					this.context.beginPath();
-					this.context.rect(entity[i].dim.x, entity[i].dim.y, entity[i].dim.w, entity[i].dim.h);
-					this.context.fill();
-				}
-				
-				// remove any entities that have moved off the screen.
-				if (destroy.length > 0)  entity.splice(destroy[0], destroy.length);
-			break;
-			case 'rect':
-				var destroy = [];
-				for (var i = 0; i < entity.length; i++) {
-					if (!!entity[i].collided) {
-						// affix to obstacle
-					} else if (!!entity[i].destroyed) {
-						this.context.strokeStyle = 'rgba(200,20,20,1.0)';
-						this.context.fillStyle = 'rgba(255,100,20,1.0)';
-						destroy.push(i);
-					} else {
-						this.context.fillStyle = 'rgba('+entity[i].rgba.red+',255,'+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
-						this.context.strokeStyle = 'rgba('+entity[i].rgba.red+','+entity[i].rgba.green+','+entity[i].rgba.blue+','+entity[i].rgba.opacity+')';
-					}
-					this.context.beginPath();
-					this.context.rect(entity[i].dim.x, entity[i].dim.y, entity[i].dim.w, entity[i].dim.h);
-					this.context.fill();
-					this.context.stroke();
-				}
-				
-				// remove any entities that have moved off the screen.
-				if (destroy.length > 0)  entity.splice(destroy[0], destroy.length);
-			break;
-		}
-	}
 	this.enemies = [];
+	this.isOffScreen = (entity) => {
+		var offTop, offBottom, offLeft, offRight;
+		offTop = entity.dim.bottom <= 0;
+		offBottom = entity.dim.y >= this.dimensions.height;
+		offLeft = entity.dim.right <= 0;
+		offRight = entity.dim.x >= this.dimensions.width;
+		return (offTop || offBottom || offLeft || offRight)
+	}
 	this.obstacles = {
 		top: [],
 		bottom: []
@@ -294,7 +205,6 @@ function Enemy(w, h, m) {
 	}
 	this.xMod;
 	this.yMod;
-	this.drawType = 'rect';
 	this.status = 'new';
 	this.rgba = {
 		red: 20,
@@ -334,8 +244,28 @@ Enemy.prototype.update = (enemy, board) => {
 	
 	enemy.dim.bottom = enemy.dim.y + enemy.dim.h;
 	enemy.dim.right = enemy.dim.x + enemy.dim.w;
-	
-	enemy.status = (enemy.status == 'new') ? 'established' : enemy.status;
+
+	enemy.status = (enemy.status == 'new') 
+		? (!board.isOffScreen(enemy)) 
+			? 'in view' : 'created'
+		: enemy.status;
+}
+
+Enemy.prototype.draw = (enemy, board) => {
+	if (!!enemy.collided) {
+		board.context.fillStyle = 'rgba(200,'+enemy.rgba.green+',20,'+enemy.rgba.opacity+')';
+		board.context.strokeStyle = 'rgba(200,'+enemy.rgba.green+',20,'+enemy.rgba.opacity+')';
+	} else if (!!enemy.destroyed) {
+		board.context.strokeStyle = 'rgba(200,20,20,1.0)';
+		board.context.fillStyle = 'rgba(255,100,20,1.0)';
+		enemy.status = 'destroyed';
+	} else {
+		board.context.fillStyle = 'rgba('+enemy.rgba.red+','+enemy.rgba.green+','+enemy.rgba.blue+','+enemy.rgba.opacity+')';
+	}
+
+	board.context.beginPath();
+	board.context.rect(enemy.dim.x, enemy.dim.y, enemy.dim.w, enemy.dim.h);
+	board.context.fill();
 }
 
 function Flow() {
@@ -383,13 +313,16 @@ function Game(canvas, d_canvas) {
 
 		// draw entities		
 			// enemies
-		this.board.draw(this.board.enemies, 'rect');
+		for (var i = 0; i < this.board.enemies.length; i++) {
+			Enemy.prototype.draw(this.board.enemies[i], this.board);
+		}
 		
 			// player
-		this.board.draw(this.board.player);
+		Player.prototype.draw(this.board.player, this.board);
+		
 		
 			// obstacles
-		this.board.draw(this.board.obstacles, 'lineTo');
+		Obstacle.prototype.draw(this.board.obstacles, this.board);
 		
 		// handle Game Worker callback
 		this.physics.worker.onmessage = (e) => {
@@ -458,20 +391,50 @@ function Game(canvas, d_canvas) {
 			// clear board to prepare for next animation state
 			this.board.context.clearRect(0,0,this.board.dimensions.width,this.board.dimensions.height);
 			if (this.status == 'playing' && this.animation.lastFrame !== null) {
-				this.board.draw(this.board.enemies, 'rect');
-				this.board.draw(this.board.player);
-				this.board.draw(this.board.projectiles, 'simpleRect');
-				this.board.draw(this.board.obstacles, 'lineTo');
+				// draw entities		
+					// enemies
+				for (var i = 0; i < this.board.enemies.length; i++) {
+					Enemy.prototype.draw(this.board.enemies[i], this.board);
+				}
+				
+					// player
+				Player.prototype.draw(this.board.player, this.board);
+				
+					// obstacles
+				Obstacle.prototype.draw(this.board.obstacles, this.board);
+				
 				this.board.obstacles.top.splice(0,1);
 				this.board.obstacles.bottom.splice(0,1);
+				
+					// projectiles
+				for (var i = 0; i < this.board.projectiles.length; i++) {
+					Projectile.prototype.draw(this.board.projectiles[i], this.board);
+				}
 			} else {
 				if (this.status == 'collision') {
 					this.board.player.collided = true;
-					this.board.draw(this.board.enemies, 'rect');
-					this.board.draw(this.board.player);
-				this.board.draw(this.board.projectiles, 'simpleRect');
+					// draw entities		
+						// enemies
+					for (var i = 0; i < this.board.enemies.length; i++) {
+						Enemy.prototype.draw(this.board.enemies[i], this.board);
+					}
+					
+						// player
+					Player.prototype.draw(this.board.player, this.board);
+					
+						// obstacles
+					Obstacle.prototype.draw(this.board.obstacles, this.board);
+					
+					this.board.obstacles.top.splice(0,1);
+					this.board.obstacles.bottom.splice(0,1);
+					
+					// stop board from moving
 					this.board.animated = false;
-					this.board.draw(this.board.obstacles, 'lineTo');
+					
+						// projectiles
+					for (var i = 0; i < this.board.projectiles.length; i++) {
+						Projectile.prototype.draw(this.board.projectiles[i], this.board);
+					}
 					this.stop('over');
 				}
 			}
@@ -529,16 +492,42 @@ function Game(canvas, d_canvas) {
 		// combine top and bottom obstacles close to the player
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
+		var destroyedProjectiles = [];
+		for (var i = 0; i < this.board.projectiles.length; i++) {
+			var projectile = this.board.projectiles[i];
+			// flag for removal if the projectile is offscreen
+			if (this.board.isOffScreen(projectile) || projectile.status == 'destroyed') 
+				destroyedProjectiles.push(i);
+		}
+
+		for (var i = 0; i < destroyedProjectiles.length; i++) {
+			this.board.projectiles.splice(destroyedProjectiles[i], 1);
+		}
+
 		// update projectiles
 		var filteredProjectiles = [];		
-		for (var i = 0; i < this.board.projectiles.length; i++) {			
-			var projectile = this.board.projectiles[i];			
+		for (var i = 0; i < this.board.projectiles.length; i++) {
+			var projectile = this.board.projectiles[i];
 			Projectile.prototype.update(projectile);
 		}
-		
+
+
+		var destroyedEnemies = [];
+		for (var i = 0; i < this.board.enemies.length; i++) {
+			var enemy = this.board.enemies[i];
+			// flag for removal if the enemy is offscreen
+			if ((enemy.status == 'in view' && this.board.isOffScreen(enemy)) || enemy.status == 'destroyed')
+				destroyedEnemies.push(i);
+		}
+
+		for (var i = 0; i < destroyedEnemies.length; i++) {
+			this.board.enemies.splice(destroyedEnemies[i], 1);
+		}
+
 		// update enemies and find projectiles close to enemies
-		for (var i = 0; i < this.board.enemies.length; i++) {			
-			var enemy = this.board.enemies[i];			
+		for (var i = 0; i < this.board.enemies.length; i++) {
+			var enemy = this.board.enemies[i];
+			
 			Enemy.prototype.update(enemy, this.board);
 			var interimProjectiles = this.board.projectiles.filter((el) => {
 				return (enemy.dim.x > (el.dim.x - 15) && enemy.dim.x < (el.dim.x + 15));
@@ -581,7 +570,6 @@ function Obstacle(x, y, w, h, r, g, b, a) {
 		right: x + w,
 		bottom: y + h
 	};
-	this.drawType = 'path';
 	this.rgba = {
 		red: r,
 		green: g,
@@ -589,6 +577,39 @@ function Obstacle(x, y, w, h, r, g, b, a) {
 		opacity: a
 	};
 	this.id = Util.prototype.getGuid();
+}
+
+Obstacle.prototype.draw = (obstacles, board) => {
+	board.context.fillStyle = 'rgba('+board.settings.rgba.red+','+board.settings.rgba.green+','+board.settings.rgba.blue+','+(board.settings.rgba.opacity - 0.3)+')';
+	board.context.strokeStyle = 'rgba(0,0,120,'+board.settings.rgba.opacity+')';
+	
+	// draw top
+	board.context.beginPath();
+	board.context.moveTo(0, 0);
+	board.context.lineTo(0, obstacles.top[0].dim.h);
+	for (var i = 0; i < obstacles.top.length; i++) {
+		obstacles.top[i].dim.x -= (!!board.animated) ? board.obstacleWidth : 0;
+		board.context.lineTo(obstacles.top[i].dim.x, obstacles.top[i].dim.h);
+	}
+	board.context.lineTo(board.dimensions.width, obstacles.top[obstacles.top.length - 1].dim.h);
+	board.context.lineTo(board.dimensions.width, 0);
+	board.context.closePath();
+	board.context.fill();
+	board.context.stroke();
+	
+	// draw bottom
+	board.context.beginPath();
+	board.context.moveTo(0, obstacles.bottom[0].dim.y);
+	for (var i = 0; i < obstacles.bottom.length; i++) {
+		obstacles.bottom[i].dim.x -= (!!board.animated) ? board.obstacleWidth : 0;
+		board.context.lineTo(obstacles.bottom[i].dim.x, obstacles.bottom[i].dim.y);
+	}
+	board.context.lineTo(board.dimensions.width, obstacles.bottom[obstacles.bottom.length - 1].dim.y);
+	board.context.lineTo(board.dimensions.width, board.dimensions.height);
+	board.context.lineTo(0, board.dimensions.height);
+	board.context.closePath();
+	board.context.fill();
+	board.context.stroke();
 }
 
 function Physics() {
@@ -663,7 +684,6 @@ function Player(x, y, r) {
 		x: x,
 		y: y
 	}
-	this.drawType = 'arc';
 	this.update = (x, y, r, weapons) => {
 		this.dim.x = x;
 		this.dim.y = y;
@@ -681,6 +701,17 @@ function Player(x, y, r) {
 	this.id = Util.prototype.getGuid();
 }
 
+Player.prototype.draw = (player, board) => {
+	board.context.beginPath();
+	if (!!player.collided) {
+		board.context.strokeStyle = board.context.fillStyle = 'rgba(200,20,20,1.0)';
+	} else {
+		board.context.strokeStyle = board.context.fillStyle = 'rgba(20,20,20,1.0)';
+	}
+	board.context.arc(player.dim.x, player.dim.y, player.dim.radius, 0, 2*Math.PI);
+	board.context.fill();
+}
+
 function Projectile(x, y, source) {
 	this.dim = {
 		x: x,
@@ -693,7 +724,6 @@ function Projectile(x, y, source) {
 	this.xMod = 15;
 	this.yMod = 0;
 	this.source = source;
-	this.drawType = 'simpleRect';
 	this.status = 'new';
 	this.rgba = {
 		red: 120,
@@ -708,6 +738,23 @@ Projectile.prototype.update = (projectile) => {
 	projectile.dim.y = projectile.dim.y + projectile.yMod;
 	projectile.dim.right = projectile.dim.x + projectile.dim.w;
 	projectile.dim.bottom = projectile.dim.y + projectile.dim.h;
+}
+
+Projectile.prototype.draw = (projectile, board) => {
+	if (!!projectile.collided) {
+		// affix to obstacle
+	} else if (!!projectile.destroyed) {
+		board.context.strokeStyle = 'rgba(200,20,20,1.0)';
+		board.context.fillStyle = 'rgba(255,100,20,1.0)';
+		projectile.status = 'destroyed';
+	} else {
+		board.context.fillStyle = 'rgba('+projectile.rgba.red+',255,'+projectile.rgba.blue+','+projectile.rgba.opacity+')';
+		board.context.strokeStyle = 'rgba('+projectile.rgba.red+','+projectile.rgba.green+','+projectile.rgba.blue+','+projectile.rgba.opacity+')';
+	}
+	board.context.beginPath();
+	board.context.rect(projectile.dim.x, projectile.dim.y, projectile.dim.w, projectile.dim.h);
+	board.context.fill();
+	board.context.stroke();
 }
 
 function Util() {}
