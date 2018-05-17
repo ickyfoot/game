@@ -139,6 +139,14 @@ function Board(canvas, animation) {
 	}
 	this.dimensions = Physics.prototype.setObjectDimensions($(canvas));
 	this.enemies = [];
+	this.isOffScreen = (entity) => {
+		var offTop, offBottom, offLeft, offRight;
+		offTop = entity.dim.bottom <= 0;
+		offBottom = entity.dim.y >= this.dimensions.height;
+		offLeft = entity.dim.right <= 0;
+		offRight = entity.dim.x >= this.dimensions.width;
+		return (offTop || offBottom || offLeft || offRight)
+	}
 	this.obstacles = {
 		top: [],
 		bottom: []
@@ -236,8 +244,11 @@ Enemy.prototype.update = (enemy, board) => {
 	
 	enemy.dim.bottom = enemy.dim.y + enemy.dim.h;
 	enemy.dim.right = enemy.dim.x + enemy.dim.w;
-	
-	enemy.status = (enemy.status == 'new') ? 'established' : enemy.status;
+
+	enemy.status = (enemy.status == 'new') 
+		? (!board.isOffScreen(enemy)) 
+			? 'in view' : 'created'
+		: enemy.status;
 }
 
 Enemy.prototype.draw = (enemy, board) => {
@@ -247,15 +258,11 @@ Enemy.prototype.draw = (enemy, board) => {
 	} else if (!!enemy.destroyed) {
 		board.context.strokeStyle = 'rgba(200,20,20,1.0)';
 		board.context.fillStyle = 'rgba(255,100,20,1.0)';
-		delete enemy
+		enemy.status = 'destroyed';
 	} else {
 		board.context.fillStyle = 'rgba('+enemy.rgba.red+','+enemy.rgba.green+','+enemy.rgba.blue+','+enemy.rgba.opacity+')';
 	}
-	
-	// flag for removal if the enemy is destroyed or offscreen
-//	if (!!enemy.destroyed || (enemy.dim.x <= 0 || enemy.dim.y <= 0 || enemy.dim.right >= board.dimensions.width || enemy.dim.bottom >= board.dimensions.height)) destroy.push(i);
-	
-	enemy.status = (enemy.status == 'new') ? 'established' : enemy.status;
+
 	board.context.beginPath();
 	board.context.rect(enemy.dim.x, enemy.dim.y, enemy.dim.w, enemy.dim.h);
 	board.context.fill();
@@ -485,16 +492,42 @@ function Game(canvas, d_canvas) {
 		// combine top and bottom obstacles close to the player
 		var filteredObstacles = filteredTopObstacles.concat(filteredBottomObstacles);
 		
+		var destroyedProjectiles = [];
+		for (var i = 0; i < this.board.projectiles.length; i++) {
+			var projectile = this.board.projectiles[i];
+			// flag for removal if the projectile is offscreen
+			if (this.board.isOffScreen(projectile) || projectile.status == 'destroyed') 
+				destroyedProjectiles.push(i);
+		}
+
+		for (var i = 0; i < destroyedProjectiles.length; i++) {
+			this.board.projectiles.splice(destroyedProjectiles[i], 1);
+		}
+
 		// update projectiles
 		var filteredProjectiles = [];		
-		for (var i = 0; i < this.board.projectiles.length; i++) {			
-			var projectile = this.board.projectiles[i];			
+		for (var i = 0; i < this.board.projectiles.length; i++) {
+			var projectile = this.board.projectiles[i];
 			Projectile.prototype.update(projectile);
 		}
-		
+
+
+		var destroyedEnemies = [];
+		for (var i = 0; i < this.board.enemies.length; i++) {
+			var enemy = this.board.enemies[i];
+			// flag for removal if the enemy is offscreen
+			if ((enemy.status == 'in view' && this.board.isOffScreen(enemy)) || enemy.status == 'destroyed')
+				destroyedEnemies.push(i);
+		}
+
+		for (var i = 0; i < destroyedEnemies.length; i++) {
+			this.board.enemies.splice(destroyedEnemies[i], 1);
+		}
+
 		// update enemies and find projectiles close to enemies
-		for (var i = 0; i < this.board.enemies.length; i++) {			
-			var enemy = this.board.enemies[i];			
+		for (var i = 0; i < this.board.enemies.length; i++) {
+			var enemy = this.board.enemies[i];
+			
 			Enemy.prototype.update(enemy, this.board);
 			var interimProjectiles = this.board.projectiles.filter((el) => {
 				return (enemy.dim.x > (el.dim.x - 15) && enemy.dim.x < (el.dim.x + 15));
@@ -713,7 +746,7 @@ Projectile.prototype.draw = (projectile, board) => {
 	} else if (!!projectile.destroyed) {
 		board.context.strokeStyle = 'rgba(200,20,20,1.0)';
 		board.context.fillStyle = 'rgba(255,100,20,1.0)';
-		delete projectile;
+		projectile.status = 'destroyed';
 	} else {
 		board.context.fillStyle = 'rgba('+projectile.rgba.red+',255,'+projectile.rgba.blue+','+projectile.rgba.opacity+')';
 		board.context.strokeStyle = 'rgba('+projectile.rgba.red+','+projectile.rgba.green+','+projectile.rgba.blue+','+projectile.rgba.opacity+')';
