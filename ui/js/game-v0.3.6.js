@@ -216,24 +216,29 @@ function Enemy(w, h, m) {
 }
 
 Enemy.prototype.update = (enemy, board) => {
-	enemy.xMod = Physics.prototype.getRandomInteger(7,10);
-			
-	if (enemy.yDirCount.up > 20) enemy.yDirCount.up = 0;
-	else if (enemy.yDirCount.down > 20) enemy.yDirCount.down = 0;
-	
-	if (enemy.yDirCount.up == 0 && enemy.yDirCount.down == 0) {
-		enemy.yMod = Physics.prototype.getRandomInteger(7,10);
-		enemy.yMod = Physics.prototype.toggleValue(Math.abs(enemy.yMod), -Math.abs(enemy.yMod));
+	if (!enemy.collided) {
+		enemy.xMod = Physics.prototype.getRandomInteger(7,10);
+				
+		if (enemy.yDirCount.up > 20) enemy.yDirCount.up = 0;
+		else if (enemy.yDirCount.down > 20) enemy.yDirCount.down = 0;
+		
+		if (enemy.yDirCount.up == 0 && enemy.yDirCount.down == 0) {
+			enemy.yMod = Physics.prototype.getRandomInteger(7,10);
+			enemy.yMod = Physics.prototype.toggleValue(Math.abs(enemy.yMod), -Math.abs(enemy.yMod));
+		}
+		
+		if (enemy.yMod > 0) {
+			enemy.yMod = Math.abs(Physics.prototype.getRandomInteger(1,7));
+			enemy.yDirCount.up++; 
+		} else if (enemy.yMod < 0) {
+			enemy.yMod = -Math.abs(Physics.prototype.getRandomInteger(1,7));
+			enemy.yDirCount.down++;
+		}
+	} else {
+		enemy.xMod = 6;
+		enemy.yMod = 0;
+		// and fire at player!
 	}
-	
-	if (enemy.yMod > 0) {
-		enemy.yMod = Math.abs(Physics.prototype.getRandomInteger(1,7));
-		enemy.yDirCount.up++; 
-	} else if (enemy.yMod < 0) {
-		enemy.yMod = -Math.abs(Physics.prototype.getRandomInteger(1,7));
-		enemy.yDirCount.down++;
-	}
-	
 	enemy.dim.x = (enemy.status != 'new') 
 		? enemy.dim.x - enemy.xMod
 		: board.dimensions.width + enemy.dim.w;
@@ -338,6 +343,17 @@ function Game(canvas, d_canvas) {
 						this.status = 'collision';
 					} else {
 						this.board.createObstacles();
+						if (appData.enemyCollisions.length > 0) {
+							for (var i = 0; i < appData.enemyCollisions.length; i++) {
+								var id = appData.enemyCollisions[i];
+								var dockedEnemy = this.board.enemies.filter(function(el) {
+									return el.id == id;
+								});
+								dockedEnemy[0].collided = true;
+								console.log(dockedEnemy);
+							}
+						}
+						
 						if (appData.shotDownObj.shotDown.length > 0) {
 							destroyedEnemies = [];
 							destroyedProjectiles = [];
@@ -575,6 +591,7 @@ function Game(canvas, d_canvas) {
 				obstacles: filteredObstacles,
 				obstacles_enemies: filteredObstacles_Enemies,
 				enemies: filteredEnemies,
+				allEnemies: this.board.enemies,
 				projectiles: filteredProjectiles,
 				enemyTargets: this.board.enemies,
 				control: this.control
@@ -702,15 +719,27 @@ function Player(x, y, r) {
 		originalDim: {
 			radius: r,
 			x: x,
-			y: y
+			y: y,
+			top: y - r,
+			bottom: y + r,
+			left: x - r,
+			right: x + r
 		},
 		x: x,
-		y: y
+		y: y,
+		top: y - r,
+		bottom: y + r,
+		left: x - r,
+		right: x + r
 	}
 	this.update = (x, y, r, weapons) => {
 		this.dim.x = x;
 		this.dim.y = y;
 		this.dim.radius = r;
+		this.dim.top = y - r;
+		this.dim.bottom = y + r;
+		this.dim.left = x - r;
+		this.dim.right = x + r;
 		this.weapons.primary.firing = weapons.primary;
 	}
 	this.weapons = {

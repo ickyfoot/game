@@ -6,23 +6,19 @@ function Physics() {
 		}
 	}
 	
-	this.detectCollision = (player, items) => {
-		var playerTop = player.y - player.radius;
-		var playerBottom = player.y + player.radius;
-		var playerLeft = player.x - player.radius;
-		var playerRight = player.x + player.radius;
+	this.detectCollision = (entity, items) => {
 		for (var i = 0; i < items.length; i++) {
 			if (
 					(
-						(playerBottom >= items[i].dim.y && playerBottom <= items[i].dim.bottom)
+						(entity.bottom >= items[i].dim.y && entity.bottom <= items[i].dim.bottom)
 							||
-						(playerTop >= items[i].dim.y && playerTop <= items[i].dim.bottom)
+						(entity.top >= items[i].dim.y && entity.top <= items[i].dim.bottom)
 					)
 						&&
 					(
-						(playerRight >= items[i].dim.x && playerRight <= items[i].dim.right)
+						(entity.right >= items[i].dim.x && entity.right <= items[i].dim.right)
 							||
-						(playerLeft >= items[i].dim.x && playerLeft <= items[i].dim.right)
+						(entity.left >= items[i].dim.x && entity.left <= items[i].dim.right)
 					)
 				) return i;
 		}
@@ -93,7 +89,11 @@ function Physics() {
 		tempDim = {
 			radius: data.player.radius,
 			x: data.player.x,
-			y: data.player.y
+			y: data.player.y,
+			top: data.player.top,
+			bottom: data.player.bottom,
+			left: data.player.left,
+			right: data.player.right
 		}
 		
 		// resize player piece
@@ -116,6 +116,11 @@ function Physics() {
 				if (!!data.control.pressedKeys['ArrowRight']) tempDim.x = data.player.x + xDelta;					
 				if (!!data.control.pressedKeys['ArrowDown']) tempDim.y = data.player.y + yDelta;					
 				if (!!data.control.pressedKeys['ArrowLeft']) tempDim.x = data.player.x - xDelta;
+				
+				tempDim.top = tempDim.y - tempDim.radius;
+				tempDim.bottom = tempDim.y + tempDim.radius;
+				tempDim.left = tempDim.x - tempDim.radius;
+				tempDim.right = tempDim.x + tempDim.radius;
 			}
 		}
 		
@@ -143,11 +148,11 @@ onmessage = function(e) {
 			shotDownObj = (appData.projectiles !== null) 
 				? physics.detectShotDown(appData.projectiles, appData.enemyTargets) 
 				: null;	
-			for (var i = 0; i < appData.enemies; i++) {
-				var enemy = appData.enemies[i];
-				enemyCollisions.push(physics.detectCollision(enemy.dim,appData.obstacles_enemies));
+			for (var i = 0; i < appData.allEnemies.length; i++) {
+				var enemy = appData.allEnemies[i];
+				var collision = physics.detectCollision(enemy.dim,appData.obstacles_enemies);
+				if (collision != null) enemyCollisions.push(enemy.id);
 			}
-			console.log(enemyCollisions);
 			if (collision === null) {
 				collision = (appData.enemies !== null) ? physics.detectCollision(dim,appData.enemies) : null;
 			}
@@ -155,6 +160,7 @@ onmessage = function(e) {
 				action: 'move player',
 				appData: {
 					collision: collision,
+					enemyCollisions: enemyCollisions,
 					radius: dim.radius,
 					shotDownObj: shotDownObj,
 					x: dim.x,
